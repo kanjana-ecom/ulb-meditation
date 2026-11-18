@@ -116,7 +116,7 @@ label,.label{font-size:15px;font-weight:600}
 </head>
 <body>
 <div id="app"><div class="loading">กำลังโหลด…</div></div>
-<audio id="clip" preload="auto" src="bell.mp3"></audio>
+<audio id="clip" preload="none" src="bell.mp3"></audio>
 
 <script>
 (function () {
@@ -190,41 +190,104 @@ label,.label{font-size:15px;font-weight:600}
       .then(function (r) { return r.json(); })
       .then(function (res) {
         if (res && res.error === 'SESSION_EXPIRED' && action !== 'auth') {
-          return auth().then(function () { return api(action, data); });
+          S.token = null;
+          return liffReady.then(auth).then(function () { return api(action, data); });
         }
         return res;
       });
   };
 
+  /* ---------------- Local cache (เปิดแอปครั้งถัดไปขึ้นทันที) ---------------- */
+  var CACHE_KEY = 'ulb_cache_v1';
+  function bkkDay() {
+    try { return new Date().toLocaleDateString('en-CA', { timeZone: 'Asia/Bangkok' }); } catch (e) { return ''; }
+  }
+  function loadCache() {
+    try { return JSON.parse(localStorage.getItem(CACHE_KEY) || 'null'); } catch (e) { return null; }
+  }
+  function saveCache() {
+    if (MOCK) return;
+    try {
+      localStorage.setItem(CACHE_KEY, JSON.stringify({ token: S.token, userId: S.userId, state: S.state, day: bkkDay() }));
+    } catch (e) {}
+  }
+  function clearCache() { try { localStorage.removeItem(CACHE_KEY); } catch (e) {} }
+
+  var liffReady = null;
+
   function auth() {
     var idToken = liff.getIDToken();
     var decoded = liff.getDecodedIDToken() || {};
     S.lineName = decoded.name || '';
+    S.userId = decoded.sub || null;
     return api('auth', { idToken: idToken }).then(function (res) {
       if (!res.ok) throw new Error(res.error || 'AUTH_FAILED');
       S.token = res.token;
       if (res.ulbList) S.ulbList = res.ulbList;
+      if (res.registered) setState(res.state); else saveCache();
       return res;
     });
+  }
+
+  function showBootError(e) {
+    app.innerHTML = '<div class="page"><div class="card"><div class="err">เปิดแอปไม่สำเร็จ (' + esc(e.message) + ')</div><div class="small muted" style="margin-top:6px">ลองปิดแล้วเปิดใหม่อีกครั้ง</div></div></div>';
+  }
+
+  // โหลดคลิประฆัง (4.9MB) หลังหน้าแอปขึ้นแล้ว จะได้ไม่แย่งเน็ตกับการโหลดข้อมูล
+  var clipQueued = false;
+  function queueClipLoad() {
+    if (clipQueued) return;
+    clipQueued = true;
+    setTimeout(function () { clip.preload = 'auto'; try { clip.load(); } catch (e) {} }, 1500);
   }
 
   function boot() {
     var start = MOCK ? window.ULBMock.boot().then(function (m) { api = m.api; window.liff = m.liff; })
                      : Promise.resolve();
-    start.then(function () {
+    var cache = MOCK ? null : loadCache();
+    var shown = false;
+
+    // 1) มีข้อมูลของวันนี้เก็บไว้ในเครื่อง → แสดงทันที แล้วค่อยอัปเดตเบื้องหลัง
+    if (cache && cache.token) { S.token = cache.token; S.userId = cache.userId || null; }
+    if (cache && cache.state && cache.state.me && cache.day === bkkDay()) {
+      setState(cache.state, true); go('home'); shown = true; queueClipLoad();
+    }
+
+    liffReady = start.then(function () {
       return liff.init({ liffId: CFG.LIFF_ID, withLoginOnExternalBrowser: true });
-    }).then(function () {
-      if (!liff.isLoggedIn()) { liff.login(); return null; }
-      return auth();
-    }).then(function (res) {
-      if (!res) return;
-      if (res.registered) { setState(res.state); go('home'); }
-      else go('register');
-    }).catch(function (e) {
-      app.innerHTML = '<div class="page"><div class="card"><div class="err">เปิดแอปไม่สำเร็จ (' + esc(e.message) + ')</div><div class="small muted" style="margin-top:6px">ลองปิดแล้วเปิดใหม่อีกครั้ง</div></div></div>';
+    });
+
+    // 2) มี session เดิมอยู่ → ขอข้อมูลล่าสุดได้เลย ไม่ต้องรอ liff.init และไม่ต้องตรวจ token กับ LINE ใหม่
+    var fast = (!MOCK && S.token)
+      ? api('state').then(function (res) { return res && res.ok && res.state && res.state.me ? res.state : null; })
+          .catch(function () { return null; })
+      : Promise.resolve(null);
+
+    liffReady.then(function () {
+      if (!liff.isLoggedIn()) { liff.login(); return 'login'; }
+      var sub = (liff.getDecodedIDToken() || {}).sub;
+      S.lineName = (liff.getDecodedIDToken() || {}).name || S.lineName;
+      if (S.userId && sub && sub !== S.userId) { clearCache(); S.token = null; S.userId = sub; return null; } // คนละบัญชีไลน์
+      if (!S.userId) S.userId = sub || null;
+      return fast;
+    }).then(function (st) {
+      if (st === 'login') return null;
+      if (st) { setState(st); if (!shown || S.view === 'loading') go('home'); else render(); return null; }
+      return auth().then(function (res) {
+        if (res.registered) { if (!shown || S.view === 'loading') go('home'); else render(); }
+        else go('register');
+        return null;
+      });
+    }).then(queueClipLoad).catch(function (e) {
+      if (shown) return; // มีข้อมูลเดิมแสดงอยู่แล้ว ไม่ต้องทับด้วยหน้า error
+      showBootError(e);
     });
   }
-  function setState(st) { S.state = st; if (st && st.ulbList) S.ulbList = st.ulbList; }
+  function setState(st, fromCache) {
+    S.state = st;
+    if (st && st.ulbList) S.ulbList = st.ulbList;
+    if (!fromCache && st && st.me) saveCache();
+  }
 
   function refresh() {
     if (!S.token || S.phase === 'running' || S.view === 'register') return Promise.resolve();
