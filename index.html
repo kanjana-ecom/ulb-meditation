@@ -1,0 +1,666 @@
+<!doctype html>
+<html lang="th">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>ULB นั่งสมาธิ</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Sans+Thai:wght@400;500;600;700&display=swap" rel="stylesheet">
+<script charset="utf-8" src="https://static.line-scdn.net/liff/edge/2/sdk.js"></script>
+<script>
+/* ===== ตั้งค่า: แก้ 2 บรรทัดนี้หลังสร้าง LIFF และ Apps Script แล้ว ===== */
+window.ULB_CONFIG = {
+  LIFF_ID: 'PUT_YOUR_LIFF_ID_HERE',
+  API_URL: 'PUT_YOUR_APPS_SCRIPT_WEB_APP_URL_HERE'
+};
+</script>
+<style>
+:root{
+  --bg:#F5F7FC; --card:#FFFFFF; --blue:#263A96; --navy:#1E2E78; --navy-dark:#18245F; --text:#1A2233;
+  --muted:#5B6478; --body2:#4A5366; --line:#E3E7EE; --soft:#E7ECF8; --soft2:#EEF1F8; --track:#EEF1F6;
+  --dash:#A9B2C3; --border:#C3CAD7; --orange:#F5A42C; --orange-text:#B45309; --orange-soft:#FEF1DE;
+  --line-green:#06C755;
+}
+*{box-sizing:border-box}
+html,body{margin:0;background:var(--bg);color:var(--text);font-family:'IBM Plex Sans Thai',system-ui,sans-serif;-webkit-tap-highlight-color:transparent}
+body{min-height:100vh}
+button,input{font-family:inherit}
+a{color:var(--navy)}
+#app{max-width:480px;margin:0 auto;min-height:100vh;display:flex;flex-direction:column}
+.page{flex:1;padding:20px 20px 110px;display:flex;flex-direction:column;gap:12px}
+.card{background:var(--card);border-radius:18px;padding:14px 16px}
+.h1{font-size:26px;font-weight:700;color:var(--navy);margin:0}
+.muted{color:var(--muted)}
+.small{font-size:13px}
+.xs{font-size:12px}
+.row{display:flex;align-items:center;gap:10px}
+.between{justify-content:space-between}
+.col{display:flex;flex-direction:column}
+.grow{flex:1;min-width:0}
+.avatar{position:relative;overflow:hidden;width:44px;height:44px;border-radius:22px;background:var(--soft);color:var(--navy);display:flex;align-items:center;justify-content:center;font-weight:600;font-size:18px;flex-shrink:0}
+.avatar img{position:absolute;inset:0;width:100%;height:100%;object-fit:cover;border-radius:inherit}
+.avatar.idle img{opacity:.45;filter:grayscale(1)}
+.avatar.sm{width:32px;height:32px;font-size:13px;border-radius:16px}
+.pill{min-height:44px;padding:0 12px 0 8px;border-radius:22px;background:var(--card);display:flex;align-items:center;gap:4px;font-weight:700;border:none;color:var(--navy);font-size:15px;cursor:pointer}
+.btn{width:100%;min-height:54px;border-radius:16px;border:none;font-size:17px;font-weight:600;cursor:pointer}
+.btn.blue{background:var(--blue);color:#fff}
+.btn.green{background:var(--line-green);color:#fff;font-weight:700}
+.btn.ghost{background:transparent;border:1.5px solid var(--border);color:var(--navy);min-height:44px;font-size:15px;font-weight:500;width:auto;padding:0 22px;border-radius:22px}
+.btn.outline-green{background:transparent;border:1.5px solid var(--line-green);color:#048A3B;min-height:48px;font-size:16px;font-weight:700}
+.btn:disabled{opacity:.5}
+.link{background:none;border:none;color:var(--muted);text-decoration:underline;font-size:13px;cursor:pointer;min-height:36px}
+.slots{display:flex}
+.slot{flex:1;display:flex;flex-direction:column;align-items:center;gap:4px}
+.dot{width:34px;height:34px;border-radius:17px;display:flex;align-items:center;justify-content:center}
+.dot.done{background:var(--blue)}
+.dot.now{border:3px solid var(--blue);background:#fff}
+.dot.todo{border:2px dashed var(--dash)}
+.week{display:flex;gap:6px}
+.wday{flex:1;display:flex;flex-direction:column;align-items:center;gap:4px}
+.wbox{width:100%;height:30px;border-radius:8px;display:flex;align-items:center;justify-content:center;font-size:11px}
+.wbox.full{background:var(--blue)}
+.wbox.part{background:#fff;border:1.5px solid #D3D9E4;color:var(--body2)}
+.wbox.today{border:2.5px solid var(--blue);background:#fff;color:var(--navy)}
+.wbox.future{border:1.5px dashed var(--border)}
+.center{display:flex;flex-direction:column;align-items:center;gap:16px;padding:8px 0}
+.startwrap{position:relative;width:232px;height:232px;display:flex;align-items:center;justify-content:center}
+.startwrap>svg{position:absolute;left:0;top:0}
+.startring{position:relative;width:184px;height:184px;border-radius:92px;background:var(--soft);display:flex;align-items:center;justify-content:center}
+.start{width:154px;height:154px;border-radius:77px;border:none;background:var(--blue);color:#fff;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:4px;box-shadow:0 10px 28px rgba(38,58,150,.25);cursor:pointer}
+.ringwrap{position:relative;width:260px;height:260px}
+.glow{position:absolute;left:-14px;top:-14px;width:288px;height:288px;border-radius:144px;background:var(--soft);opacity:0;transition:opacity .4s}
+.glow.on{opacity:1}
+.ringtext{position:absolute;inset:0;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:4px}
+.time{font-size:52px;font-weight:500;font-variant-numeric:tabular-nums;letter-spacing:1px;color:var(--navy)}
+.bells{display:flex;gap:10px}
+.bell{width:12px;height:12px;border-radius:6px;border:2px solid var(--dash)}
+.bell.on{background:var(--blue);border-color:var(--blue)}
+.nav{position:fixed;left:0;right:0;bottom:0;background:#fff;border-top:1px solid var(--line);padding:6px 0 calc(10px + env(safe-area-inset-bottom))}
+.nav-in{max-width:480px;margin:0 auto;display:flex}
+.nav button{flex:1;min-height:52px;border:none;background:none;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:2px;color:var(--muted);font-size:12px;cursor:pointer}
+.nav button.on{color:var(--navy);font-weight:600}
+.feed-row{display:flex;align-items:center;gap:10px;font-size:14px}
+.chips{display:flex;gap:8px;flex-wrap:wrap}
+.chip{min-height:36px;padding:0 16px;border-radius:18px;border:1.5px solid var(--border);background:transparent;color:var(--body2);font-size:14px;cursor:pointer}
+.chip.on{background:var(--navy);border-color:var(--navy);color:#fff}
+.ulbgrid{display:grid;grid-template-columns:repeat(5,minmax(0,1fr));gap:8px}
+.ulbbtn{min-height:46px;border-radius:12px;border:1.5px solid var(--border);background:#fff;color:var(--navy);font-size:17px;cursor:pointer}
+.ulbbtn.on{background:var(--blue);border:2px solid var(--blue);color:#fff;font-weight:700}
+.rank-row{display:flex;align-items:center;gap:12px;padding:10px 16px}
+.rank-row.me{background:var(--soft)}
+.sdots{display:flex;gap:6px}
+.sdot{width:24px;height:24px;border-radius:12px;font-size:11px;display:flex;align-items:center;justify-content:center;border:1.5px dashed var(--dash);color:var(--muted)}
+.sdot.on{background:var(--blue);border:none;color:#fff}
+.bar{height:6px;border-radius:3px;background:var(--track)}
+.bar>div{height:100%;border-radius:3px;background:var(--navy)}
+.icons{display:flex;align-items:center}
+.icons.grey{opacity:.3;filter:grayscale(1)}
+.lane{display:flex;align-items:center;gap:10px;padding:2px 6px;border-radius:10px}
+.lane.me{background:var(--soft)}
+.track{flex:1;position:relative;height:30px}
+.track:before{content:'';position:absolute;left:0;right:0;top:13px;height:4px;border-radius:2px;background:var(--track)}
+.runner{position:absolute;top:2px;width:26px;height:26px;margin-left:-13px;border-radius:13px;background:var(--blue);display:flex;align-items:center;justify-content:center;transition:left 1.4s cubic-bezier(.2,.8,.2,1)}
+.runner.first{background:var(--orange)}
+.podium{position:relative;display:flex;align-items:flex-end;gap:8px;height:190px;padding:16px 16px 0}
+.pcol{flex:1;display:flex;flex-direction:column;align-items:center;gap:4px}
+.pblock{width:100%;border-radius:12px 12px 0 0;display:flex;justify-content:center;padding-top:6px;font-size:26px;font-weight:700}
+.help{position:absolute;top:10px;right:10px;width:30px;height:30px;border-radius:15px;border:1.5px solid var(--border);background:#fff;color:var(--navy);font-size:15px;font-weight:700;cursor:pointer;padding:0}
+.helpbox{padding:12px 14px;background:var(--navy);color:#fff;border-radius:14px;font-size:13px;line-height:1.6}
+.field{min-height:52px;padding:0 16px;border-radius:12px;border:1.5px solid var(--border);background:#fff;font-size:18px;color:var(--text);width:100%}
+label,.label{font-size:15px;font-weight:600}
+.toast{position:fixed;left:50%;bottom:96px;transform:translateX(-50%);background:var(--navy);color:#fff;padding:10px 16px;border-radius:12px;font-size:14px;z-index:9;max-width:90vw;text-align:center}
+.loading{flex:1;display:flex;align-items:center;justify-content:center;color:var(--muted)}
+.err{color:#B42318;font-size:14px}
+</style>
+</head>
+<body>
+<div id="app"><div class="loading">กำลังโหลด…</div></div>
+<audio id="clip" preload="auto" src="bell.mp3"></audio>
+
+<script>
+(function () {
+  'use strict';
+  var CFG = window.ULB_CONFIG;
+  var CLIP_SECONDS = 308;
+  var BELL_TIMES = [61, 121.2, 181.7, 242.2, 300.1];
+  var params = new URLSearchParams(location.search);
+  var MOCK = params.get('mock') === '1' || CFG.LIFF_ID.indexOf('PUT_') === 0;
+
+  /* ---------------- Icons ---------------- */
+  var ORANGE = '#F5A42C';
+  var MEDAL_INNER = '<defs><radialGradient id="ulbMedalG" cx="38%" cy="32%" r="75%"><stop offset="0" stop-color="#FBE6A0"></stop><stop offset="0.55" stop-color="#E7B83F"></stop><stop offset="1" stop-color="#B9861C"></stop></radialGradient></defs><polygon points="40,0 29,0 21,27 30,30" fill="#FFFFFF"></polygon><polygon points="40,0 36.3,0 27,29 30,30" fill="#A3172E"></polygon><polygon points="32.7,0 29,0 21,27 24,28" fill="#1B2B5B"></polygon><polygon points="8,0 19,0 27,27 18,30" fill="#FFFFFF"></polygon><polygon points="8,0 11.7,0 21,29 18,30" fill="#A3172E"></polygon><polygon points="15.3,0 19,0 27,27 24,28" fill="#1B2B5B"></polygon><polygon points="8,0 40,0 40,0.8 8,0.8" fill="#00000010"></polygon><rect x="20.5" y="23.5" width="7" height="4.5" rx="1.2" fill="#C9971F"></rect><circle cx="24" cy="40" r="15" fill="url(#ulbMedalG)" stroke="#A97A16" stroke-width="1"></circle><circle cx="24" cy="40" r="11" fill="none" stroke="#C9971F" stroke-width="0.8" opacity="0.8"></circle><ellipse cx="18.51" cy="51.78" rx="0.9" ry="2" transform="rotate(205 18.51 51.78)" fill="#B9861C" opacity="0.85"></ellipse><ellipse cx="14.81" cy="49.19" rx="0.9" ry="2" transform="rotate(225 14.81 49.19)" fill="#B9861C" opacity="0.85"></ellipse><ellipse cx="12.22" cy="45.49" rx="0.9" ry="2" transform="rotate(245 12.22 45.49)" fill="#B9861C" opacity="0.85"></ellipse><ellipse cx="11.05" cy="41.13" rx="0.9" ry="2" transform="rotate(265 11.05 41.13)" fill="#B9861C" opacity="0.85"></ellipse><ellipse cx="11.44" cy="36.64" rx="0.9" ry="2" transform="rotate(285 11.44 36.64)" fill="#B9861C" opacity="0.85"></ellipse><ellipse cx="13.35" cy="32.54" rx="0.9" ry="2" transform="rotate(305 13.35 32.54)" fill="#B9861C" opacity="0.85"></ellipse><ellipse cx="16.54" cy="29.35" rx="0.9" ry="2" transform="rotate(325 16.54 29.35)" fill="#B9861C" opacity="0.85"></ellipse><ellipse cx="29.49" cy="51.78" rx="0.9" ry="2" transform="rotate(155 29.49 51.78)" fill="#B9861C" opacity="0.85"></ellipse><ellipse cx="33.19" cy="49.19" rx="0.9" ry="2" transform="rotate(135 33.19 49.19)" fill="#B9861C" opacity="0.85"></ellipse><ellipse cx="35.78" cy="45.49" rx="0.9" ry="2" transform="rotate(115 35.78 45.49)" fill="#B9861C" opacity="0.85"></ellipse><ellipse cx="36.95" cy="41.13" rx="0.9" ry="2" transform="rotate(95 36.95 41.13)" fill="#B9861C" opacity="0.85"></ellipse><ellipse cx="36.56" cy="36.64" rx="0.9" ry="2" transform="rotate(75 36.56 36.64)" fill="#B9861C" opacity="0.85"></ellipse><ellipse cx="34.65" cy="32.54" rx="0.9" ry="2" transform="rotate(55 34.65 32.54)" fill="#B9861C" opacity="0.85"></ellipse><ellipse cx="31.46" cy="29.35" rx="0.9" ry="2" transform="rotate(35 31.46 29.35)" fill="#B9861C" opacity="0.85"></ellipse><polygon points="24,40 24,32.8 22.3,37.65" fill="#FBE29A"></polygon><polygon points="24,40 24,32.8 25.7,37.65" fill="#CF9A26"></polygon><polygon points="24,40 30.85,37.78 25.7,37.65" fill="#FBE29A"></polygon><polygon points="24,40 30.85,37.78 26.76,40.9" fill="#CF9A26"></polygon><polygon points="24,40 28.23,45.82 26.76,40.9" fill="#FBE29A"></polygon><polygon points="24,40 28.23,45.82 24,42.9" fill="#CF9A26"></polygon><polygon points="24,40 19.77,45.82 24,42.9" fill="#FBE29A"></polygon><polygon points="24,40 19.77,45.82 21.24,40.9" fill="#CF9A26"></polygon><polygon points="24,40 17.15,37.78 21.24,40.9" fill="#FBE29A"></polygon><polygon points="24,40 17.15,37.78 22.3,37.65" fill="#CF9A26"></polygon>';
+  function medal(w) { return '<svg width="' + w + '" height="' + Math.round(w * 56 / 48) + '" viewBox="0 0 48 56" aria-hidden="true">' + MEDAL_INNER + '</svg>'; }
+  function trophy(w) {
+    return '<svg width="' + w + '" height="' + w + '" viewBox="0 0 24 24" aria-hidden="true"><path d="M7 4H4.5v1.5A3.5 3.5 0 0 0 8 9M17 4h2.5v1.5A3.5 3.5 0 0 1 16 9" fill="none" stroke="#D4A62A" stroke-width="1.6"></path><path d="M7 2.5h10V8a5 5 0 0 1-10 0z" fill="#F2CE5C"></path><path d="M9 4h2v4.5a3 3 0 0 1-2-2.5z" fill="#FBE7A6"></path><rect x="11" y="12.8" width="2" height="4" fill="#D4A62A"></rect><rect x="7.5" y="16.8" width="9" height="3.4" rx="1" fill="#B88A16"></rect><rect x="9.5" y="17.8" width="5" height="1.2" rx="0.6" fill="#F2CE5C"></rect></svg>';
+  }
+  function crown(w) {
+    return '<svg width="' + w + '" height="' + w + '" viewBox="0 0 24 24" aria-hidden="true"><path d="M3 8l4.5 4L12 5l4.5 7L21 8l-2 10H5z" fill="#F2CE5C" stroke="#D4A62A" stroke-width="0.8" stroke-linejoin="round"></path><circle cx="3" cy="7.5" r="1.2" fill="#F2CE5C"></circle><circle cx="12" cy="4.5" r="1.2" fill="#F2CE5C"></circle><circle cx="21" cy="7.5" r="1.2" fill="#F2CE5C"></circle><circle cx="12" cy="13.6" r="1.7" fill="#A3172E"></circle><circle cx="7.6" cy="15.2" r="1.1" fill="#1B2B5B"></circle><circle cx="16.4" cy="15.2" r="1.1" fill="#1B2B5B"></circle><rect x="5" y="18" width="14" height="2.2" rx="0.6" fill="#D4A62A"></rect></svg>';
+  }
+  /* LV0: medal สีเทา · LV1–3: 1–3 เหรียญ · LV4: ถ้วย (Champ) · LV5: มงกุฎ (ราชา) */
+  function levelIcons(lv, size, forceGrey) {
+    var h = '';
+    if (lv <= 0) h = medal(size);
+    else if (lv <= 3) { for (var i = 0; i < lv; i++) h += medal(size); }
+    else if (lv === 4) h = trophy(Math.round(size * 1.15));
+    else h = crown(Math.round(size * 1.15));
+    return '<span class="icons' + (lv <= 0 || forceGrey ? ' grey' : '') + '" aria-label="LV' + lv + '">' + h + '</span>';
+  }
+  var LV_NAMES = ['LV0 · เริ่มต้น', 'LV1 · 1 เหรียญ', 'LV2 · 2 เหรียญ', 'LV3 · 3 เหรียญ', 'LV4 · Champ', 'LV5 · ราชา'];
+  function rays(cx, cy, r1, lens, n, skipBottom, width) {
+    var d = '';
+    for (var k = 0; k < n; k++) {
+      var a = -90 + k * 360 / n;
+      if (skipBottom && a > 40 && a < 140) continue;
+      var L = lens[k % lens.length], ra = a * Math.PI / 180;
+      d += 'M' + (cx + r1 * Math.cos(ra)).toFixed(2) + ' ' + (cy + r1 * Math.sin(ra)).toFixed(2) +
+        'L' + (cx + (r1 + L) * Math.cos(ra)).toFixed(2) + ' ' + (cy + (r1 + L) * Math.sin(ra)).toFixed(2);
+    }
+    return '<path d="' + d + '" stroke="' + ORANGE + '" stroke-width="' + width + '" stroke-linecap="round" fill="none"></path>';
+  }
+  function person(size, stroke, sw) {
+    return '<svg width="' + size + '" height="' + size + '" viewBox="0 0 24 24" aria-hidden="true">' + rays(12, 10, 5.6, [2.2, 1.2], 12, true, 1.3) +
+      '<ellipse cx="12" cy="10" rx="3.1" ry="3.9" fill="none" stroke="' + stroke + '" stroke-width="' + sw + '"></ellipse>' +
+      '<path d="M10.2 13.6c0 1.3-.7 1.9-2.3 2.6-1.7.7-2.5 1.9-2.5 4.4M13.8 13.6c0 1.3.7 1.9 2.3 2.6 1.7.7 2.5 1.9 2.5 4.4M8.6 19v1.6M15.4 19v1.6" fill="none" stroke="' + stroke + '" stroke-width="' + sw + '" stroke-linecap="round" stroke-linejoin="round"></path></svg>';
+  }
+  var CHECK = '<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="3.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M5 12.5l4.5 4.5L19 7.5"></path></svg>';
+  var CROWN_LINE = '<path d="M2 6l7 6 6-10 6 10 7-6-3 16H5z"></path>';
+  var STAR = '<path d="M12 2.5l2.9 6.1 6.6.8-4.9 4.6 1.3 6.6L12 17.3l-5.9 3.3 1.3-6.6-4.9-4.6 6.6-.8z"></path>';
+
+  function esc(s) { return String(s == null ? '' : s).replace(/[&<>"']/g, function (c) { return { '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]; }); }
+  function initial(s) { return esc(Array.from(String(s || '?'))[0]); }
+  function face(name, pic) {
+    var img = pic && /^(https:\/\/|data:image\/)/.test(String(pic))
+      ? '<img src="' + esc(pic) + '" alt="" loading="lazy" referrerpolicy="no-referrer" onerror="this.remove()">' : '';
+    return initial(name) + img;
+  }
+
+  var S = {
+    token: null, state: null, view: 'loading', lineName: '', ulbList: [],
+    phase: 'idle', result: null, period: 'today', error: '', paused: false,
+    cupReady: false, regUlb: null, help: false
+  };
+  var clip = document.getElementById('clip');
+  var app = document.getElementById('app');
+
+  /* ---------------- API ---------------- */
+  var api = MOCK ? null : function (action, data) {
+    var body = Object.assign({ action: action, token: S.token }, data || {});
+    return fetch(CFG.API_URL, { method: 'POST', body: JSON.stringify(body) })
+      .then(function (r) { return r.json(); })
+      .then(function (res) {
+        if (res && res.error === 'SESSION_EXPIRED' && action !== 'auth') {
+          return auth().then(function () { return api(action, data); });
+        }
+        return res;
+      });
+  };
+
+  function auth() {
+    var idToken = liff.getIDToken();
+    var decoded = liff.getDecodedIDToken() || {};
+    S.lineName = decoded.name || '';
+    return api('auth', { idToken: idToken }).then(function (res) {
+      if (!res.ok) throw new Error(res.error || 'AUTH_FAILED');
+      S.token = res.token;
+      if (res.ulbList) S.ulbList = res.ulbList;
+      return res;
+    });
+  }
+
+  function boot() {
+    var start = MOCK ? window.ULBMock.boot().then(function (m) { api = m.api; window.liff = m.liff; })
+                     : Promise.resolve();
+    start.then(function () {
+      return liff.init({ liffId: CFG.LIFF_ID, withLoginOnExternalBrowser: true });
+    }).then(function () {
+      if (!liff.isLoggedIn()) { liff.login(); return null; }
+      return auth();
+    }).then(function (res) {
+      if (!res) return;
+      if (res.registered) { setState(res.state); go('home'); }
+      else go('register');
+    }).catch(function (e) {
+      app.innerHTML = '<div class="page"><div class="card"><div class="err">เปิดแอปไม่สำเร็จ (' + esc(e.message) + ')</div><div class="small muted" style="margin-top:6px">ลองปิดแล้วเปิดใหม่อีกครั้ง</div></div></div>';
+    });
+  }
+  function setState(st) { S.state = st; if (st && st.ulbList) S.ulbList = st.ulbList; }
+
+  function refresh() {
+    if (!S.token || S.phase === 'running' || S.view === 'register') return Promise.resolve();
+    return api('state').then(function (res) { if (res.ok) { setState(res.state); render(); } });
+  }
+
+  /* ---------------- Navigation ---------------- */
+  function go(view) {
+    S.view = view;
+    if (view === 'cup') { S.cupReady = false; setTimeout(function () { S.cupReady = true; moveRunners(); }, 250); }
+    render();
+    window.scrollTo(0, 0);
+  }
+
+  function render() {
+    if (S.view === 'register') { app.innerHTML = viewRegister(); return; }
+    if (!S.state || !S.state.me) { app.innerHTML = '<div class="loading">กำลังโหลด…</div>'; return; }
+    var body = S.view === 'stars' ? viewLevel() : S.view === 'cup' ? viewCup() : S.view === 'rank' ? viewRank() : viewHome();
+    app.innerHTML = body + (S.phase === 'running' && S.view === 'home' ? '' : viewNav());
+    if (S.view === 'cup' && S.cupReady) moveRunners();
+  }
+
+  function viewNav() {
+    function b(v, label, icon) {
+      return '<button data-go="' + v + '" class="' + (S.view === v ? 'on' : '') + '">' + icon + label + '</button>';
+    }
+    return '<nav class="nav"><div class="nav-in">' +
+      b('home', 'นั่งสมาธิ', person(26, 'currentColor', 1.7)) +
+      b('stars', 'Level', '<svg width="24" height="24" viewBox="0 0 24 24" aria-hidden="true"><path d="M8 1.8l3 6.4M16 1.8l-3 6.4" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"></path><circle cx="12" cy="15" r="6.2" fill="none" stroke="currentColor" stroke-width="1.8"></circle><path d="M12 11.6l1 2.1 2.3.3-1.7 1.6.4 2.3-2-1.1-2 1.1.4-2.3-1.7-1.6 2.3-.3z" fill="' + ORANGE + '"></path></svg>') +
+      b('rank', 'อันดับ', '<svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" aria-hidden="true"><path d="M5 20v-7M12 20V5M19 20v-10"></path></svg>') +
+      b('cup', 'แข่ง ULB', '<svg width="24" height="24" viewBox="0 0 30 22" fill="none" stroke="currentColor" stroke-width="2" stroke-linejoin="round" aria-hidden="true">' + CROWN_LINE + '</svg>') +
+      '</div></nav>';
+  }
+
+  /* ---------------- Register ---------------- */
+  function viewRegister() {
+    var me = S.state && S.state.me;
+    var list = S.ulbList && S.ulbList.length ? S.ulbList : [1, 2, 3, 4, 5, 6, 7, 8, 9];
+    if (S.regUlb == null) {
+      var fromLink = parseInt((me && me.ulb) || params.get('ulb'), 10);
+      S.regUlb = list.indexOf(fromLink) >= 0 ? fromLink : null;
+    }
+    var nick = document.getElementById('nick') ? document.getElementById('nick').value : ((me && me.nickname) || '');
+    var h = '<div class="page" style="padding-bottom:24px">' +
+      '<div class="h1" style="margin-top:12px">ยินดีต้อนรับ</div>' +
+      '<div class="muted">นั่งสมาธิ 5 นาที วันละ 3 ครั้ง กับเพื่อน ULB</div>' +
+      '<form id="regForm" class="card col" style="gap:10px;margin-top:8px">' +
+      '<label for="nick">ชื่อเล่น</label>' +
+      '<input id="nick" class="field" maxlength="20" placeholder="เช่น มิ้นท์" value="' + esc(nick) + '" autocomplete="off">' +
+      '<div class="label" style="margin-top:6px">ULB รุ่นที่</div><div class="ulbgrid">';
+    list.forEach(function (n) { h += '<button type="button" class="ulbbtn' + (S.regUlb === n ? ' on' : '') + '" data-ulb="' + n + '">' + n + '</button>'; });
+    h += '</div>' + (params.get('ulb') ? '<div class="xs muted">เลือกรุ่นไว้ให้แล้วจากลิงก์ที่เพื่อนส่งมา แตะเปลี่ยนได้</div>' : '') +
+      (S.error ? '<div class="err">' + esc(S.error) + '</div>' : '') +
+      '<button class="btn blue" type="submit" style="margin-top:10px">เริ่มนั่งเลย</button>' +
+      '</form>' +
+      '<div class="xs muted">กรอกครั้งเดียว ครั้งต่อไปเปิดมาก็นั่งได้เลย</div></div>';
+    return h;
+  }
+
+  function submitRegister(e) {
+    e.preventDefault();
+    var nickname = document.getElementById('nick').value.trim();
+    if (!nickname) { S.error = 'กรอกชื่อเล่นก่อนนะครับ'; render(); return; }
+    if (!S.regUlb) { S.error = 'แตะเลือกรุ่น ULB ของคุณ'; render(); return; }
+    S.error = '';
+    var btn = e.target.querySelector('button[type=submit]'); btn.disabled = true; btn.textContent = 'กำลังบันทึก…';
+    api('register', { nickname: nickname, ulb: S.regUlb, lineName: S.lineName }).then(function (res) {
+      if (!res.ok) { S.error = 'บันทึกไม่สำเร็จ ลองใหม่อีกครั้ง'; render(); return; }
+      setState(res.state); go('home');
+    });
+  }
+
+  /* ---------------- Home ---------------- */
+  function thaiDate() {
+    try { return new Date().toLocaleDateString('th-TH', { weekday: 'long', day: 'numeric', month: 'long', timeZone: 'Asia/Bangkok' }); }
+    catch (e) { return ''; }
+  }
+  function ago(ms) {
+    var m = Math.floor((Date.now() - ms) / 60000);
+    if (m < 1) return 'เมื่อสักครู่';
+    if (m < 60) return m + ' นาทีที่แล้ว';
+    return Math.floor(m / 60) + ' ชม.ที่แล้ว';
+  }
+  function nextText(me) {
+    if (!me.next) return 'ระดับสูงสุดแล้ว รักษามงกุฎไว้ให้ได้';
+    var n = me.next.level;
+    if (me.next.points != null) return 'อีก ' + me.next.points + ' คะแนน ได้' + (n === 1 ? 'เหรียญแรก' : ' ' + n + ' เหรียญ');
+    return 'นั่งครบทุกวันต่ออีก ' + me.next.days + ' วัน ได้' + (n === 4 ? 'ถ้วย Champ' : 'มงกุฎราชา');
+  }
+  function todayText(me, max) {
+    var left = max - me.todayN;
+    return left > 0 ? 'วันนี้นั่งอีก ' + left + ' ครั้ง จะครบ ' + max + ' ครั้ง (+1 โบนัส)' : 'วันนี้นั่งครบ ' + max + ' ครั้งแล้ว';
+  }
+
+  function viewHome() {
+    var st = S.state, me = st.me, max = st.maxPerDay;
+    var h = '<div class="page">';
+    h += '<div class="row"><div class="avatar">' + face(me.nickname, me.picture) + '</div>' +
+      '<div class="grow col"><div class="small muted">' + esc(thaiDate()) + '</div>' +
+      '<div style="font-size:20px;font-weight:600;color:var(--navy)">สวัสดี คุณ' + esc(me.nickname) + '</div></div>' +
+      '<button class="pill" data-go="stars" aria-label="Level ของฉัน">' + (me.level <= 3 ? '<span class="icons' + (me.level ? '' : ' grey') + '">' + medal(24) + '</span>' : levelIcons(me.level, 22)) + 'LV' + me.level + '</button></div>';
+
+    h += '<div class="card slots">';
+    for (var i = 1; i <= max; i++) {
+      var done = me.todayN >= i, now = !done && me.todayN === i - 1;
+      h += '<div class="slot"><div class="dot ' + (done ? 'done' : now ? 'now' : 'todo') + '">' + (done ? CHECK : '') + '</div>' +
+        '<div style="font-size:15px;font-weight:600">ครั้งที่ ' + i + '</div>' +
+        '<div class="xs muted">' + (done ? 'เสร็จแล้ว' : now ? 'ถัดไป' : 'รอก่อน') + '</div></div>';
+    }
+    h += '</div>';
+
+    if (S.phase === 'running') return h + viewRunning() + '</div>';
+    if (S.phase === 'done') return h + viewDone() + '</div>';
+
+    var labels = ['จ', 'อ', 'พ', 'พฤ', 'ศ', 'ส', 'อา'];
+    h += '<div class="card col" style="gap:10px" data-go="stars" role="link" tabindex="0">' +
+      '<div class="row between" style="align-items:baseline"><div style="font-size:15px;font-weight:700;color:var(--navy)">' + me.score + ' คะแนน</div>' +
+      '<div class="xs muted">28 วันล่าสุด (4 สัปดาห์)</div></div><div class="week">';
+    me.last7.forEach(function (d, i) {
+      var cls = d.n >= max ? 'full' : i === 6 ? 'today' : d.n > 0 ? 'part' : 'future';
+      h += '<div class="wday"><div class="wbox ' + cls + '">' + (cls === 'full' ? CHECK : d.n > 0 || i === 6 ? d.n + '/' + max : '') + '</div><div class="xs muted">' + (i === 6 ? 'วันนี้' : labels[d.dow]) + '</div></div>';
+    });
+    h += '</div><div class="small" style="color:var(--body2)">' + esc(todayText(me, max)) + ' · ' + esc(nextText(me)) + '</div></div>';
+
+    h += '<div class="center"><div class="startwrap"><svg width="232" height="232" viewBox="0 0 232 232" aria-hidden="true">' + rays(116, 116, 98, [12, 6], 24, false, 4) + '</svg>' +
+      '<div class="startring"><button class="start" data-act="start">' + person(50, '#FFFFFF', 1.5) +
+      '<span style="font-size:20px;font-weight:600">เริ่มทำสมาธิ</span></button></div></div></div>';
+
+    h += '<div class="card col" style="gap:8px"><div class="row"><div style="width:8px;height:8px;border-radius:4px;background:var(--orange)"></div>' +
+      '<div class="grow" style="font-size:14px;font-weight:600">เพื่อนเพิ่งนั่งเสร็จ</div><div class="xs muted">วันนี้ ' + st.satToday + ' จาก ' + st.totalMembers + ' คน</div></div>';
+    if (!st.recent.length) h += '<div class="small muted">ยังไม่มีใครนั่งในวันนี้ เริ่มเป็นคนแรกเลย</div>';
+    st.recent.forEach(function (r) {
+      h += '<div class="feed-row"><div class="avatar sm">' + face(r.nickname, r.picture) + '</div><div class="grow"><b>' + esc(r.nickname) + '</b> <span class="muted">· ULB ' + r.ulb + ' · ครั้งที่ ' + r.nth + '</span></div><div class="xs muted">' + ago(r.at) + '</div></div>';
+    });
+    h += '</div>';
+    return h + '</div>';
+  }
+
+  function viewRunning() {
+    return '<div class="center" style="padding-top:20px">' +
+      '<div class="ringwrap"><div class="glow" id="glow"></div>' +
+      '<svg width="260" height="260" viewBox="0 0 260 260" style="position:absolute;left:0;top:0" aria-hidden="true">' +
+      '<circle cx="130" cy="130" r="120" fill="#fff" stroke="#EEF1F6" stroke-width="12"></circle>' +
+      '<circle id="ring" cx="130" cy="130" r="120" fill="none" stroke="#263A96" stroke-width="12" stroke-linecap="round" stroke-dasharray="754" stroke-dashoffset="754" transform="rotate(-90 130 130)"></circle></svg>' +
+      '<div class="ringtext"><div class="time" id="time">5:08</div><div id="sub" style="font-size:15px" class="muted">นาทีที่ 1 จาก 5</div></div></div>' +
+      '<div class="bells" id="bells" aria-label="ระฆังที่ดังแล้ว">' + '<div class="bell"></div>'.repeat(5) + '</div>' +
+      '<div class="small muted" style="text-align:center">หลับตา หายใจสบายๆ<br>เปิดหน้าจอค้างไว้ระหว่างนั่ง</div>' +
+      (S.paused ? '<button class="btn blue" data-act="resume" style="width:auto;padding:0 28px">เสียงหยุดไป · กดเล่นต่อ</button>' : '') +
+      '<button class="btn ghost" data-act="cancel">หยุดกลางคัน</button>' +
+      (MOCK ? '<button class="link" data-act="skip">ข้ามไปตอนจบ (โหมดทดลอง)</button>' : '') +
+      '</div>';
+  }
+
+  function viewDone() {
+    var r = S.result || {}, me = S.state.me, max = S.state.maxPerDay;
+    var title, sub, up = false;
+    if (r.pending) {
+      return '<div class="center" style="padding-top:60px"><div class="muted">กำลังบันทึก…</div></div>';
+    } else if (r.error === 'TOO_SHORT' || r.error === 'NOT_STARTED') {
+      title = 'ครั้งนี้ยังไม่นับ'; sub = 'ต้องฟังคลิปจนจบก่อนนะครับ';
+    } else if (!r.counted) {
+      title = 'อนุโมทนาครับ'; sub = 'วันนี้นับครบ ' + max + ' ครั้งไปแล้ว ครั้งนี้เป็นการนั่งเพิ่ม';
+    } else {
+      var b = r.before || {};
+      var gained = me.todayPts - (b.todayPts || 0);
+      if (me.level > (b.level || 0)) {
+        up = true;
+        title = me.level === 1 ? 'ได้เหรียญแรก · LV1' : me.level <= 3 ? 'ได้ ' + me.level + ' เหรียญ · LV' + me.level : me.level === 4 ? 'ได้ถ้วย Champ · LV4' : 'ได้มงกุฎราชา · LV5';
+        sub = '+' + gained + ' คะแนน · รวม ' + me.score + ' คะแนน · ' + nextText(me);
+      } else if (me.todayN >= max) { title = 'วันนี้นั่งครบ ' + max + ' ครั้งแล้ว'; sub = '+' + gained + ' คะแนน (รวมโบนัส) · ' + nextText(me); }
+      else { title = 'นั่งครั้งที่ ' + me.todayN + ' เสร็จแล้ว'; sub = '+' + gained + ' คะแนน · ' + todayText(me, max); }
+    }
+    var icon = up
+      ? '<div style="min-width:116px;height:116px;padding:0 14px;border-radius:58px;background:var(--orange-soft);display:flex;align-items:center;justify-content:center">' + levelIcons(me.level, 64) + '</div>'
+      : '<div style="width:96px;height:96px;border-radius:48px;background:var(--blue);display:flex;align-items:center;justify-content:center"><svg width="44" height="44" viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M5 12.5l4.5 4.5L19 7.5"></path></svg></div>';
+    return '<div class="center" style="padding-top:24px">' + icon +
+      '<div class="col" style="align-items:center;gap:6px;text-align:center"><div style="font-size:26px;font-weight:700;color:var(--navy)">' + esc(title) + '</div>' +
+      '<div style="font-size:15px;color:#3F485A;line-height:1.55">' + esc(sub) + '</div></div>' +
+      (r.counted ? (S.shared ? '<div class="small" style="color:#048A3B;font-weight:600">ส่งเข้ากลุ่มไลน์แล้ว</div>' : '<button class="btn green" data-act="shareDone">แจ้งเข้ากลุ่มไลน์</button>') : '') +
+      '<button class="btn ghost" data-act="home">กลับหน้าหลัก</button></div>';
+  }
+
+  /* ---------------- Meditation flow ---------------- */
+  var wakeLock = null, lastT = 0, userStopped = false;
+
+  function startSitting() {
+    S.phase = 'running'; S.paused = false; S.result = null; S.shared = false; userStopped = false; lastT = 0;
+    clip.currentTime = 0;
+    var p = clip.play();
+    if (p && p.catch) p.catch(function () { S.paused = true; render(); });
+    try { if (navigator.wakeLock) navigator.wakeLock.request('screen').then(function (w) { wakeLock = w; }).catch(function () {}); } catch (e) {}
+    api('start');
+    render();
+    flash();
+    tick();
+  }
+  function stopSitting() {
+    userStopped = true;
+    clip.pause();
+    if (wakeLock) { try { wakeLock.release(); } catch (e) {} wakeLock = null; }
+  }
+  function tick() {
+    if (S.phase !== 'running') return;
+    var t = clip.currentTime || 0;
+    BELL_TIMES.forEach(function (b) { if (lastT < b && t >= b) flash(); });
+    lastT = t;
+    var left = Math.max(0, Math.ceil(CLIP_SECONDS - t));
+    var el = document.getElementById('time');
+    if (el) {
+      el.textContent = Math.floor(left / 60) + ':' + ('0' + (left % 60)).slice(-2);
+      document.getElementById('ring').setAttribute('stroke-dashoffset', String(754 * (1 - Math.min(1, t / CLIP_SECONDS))));
+      document.getElementById('sub').textContent = 'นาทีที่ ' + Math.min(5, Math.floor(t / 60) + 1) + ' จาก 5';
+      var bells = document.getElementById('bells').children;
+      for (var i = 0; i < bells.length; i++) bells[i].className = 'bell' + (t >= BELL_TIMES[i] ? ' on' : '');
+    }
+  }
+  function flash() {
+    var g = document.getElementById('glow');
+    if (!g) return;
+    g.className = 'glow on';
+    setTimeout(function () { var x = document.getElementById('glow'); if (x) x.className = 'glow'; }, 1200);
+  }
+  function finishSitting() {
+    stopSitting();
+    S.phase = 'done';
+    S.result = { pending: true };
+    render();
+    api('finish').then(function (res) {
+      S.result = res;
+      if (res.state) setState(res.state);
+      render();
+    });
+  }
+  clip.addEventListener('timeupdate', tick);
+  clip.addEventListener('ended', function () { if (S.phase === 'running') finishSitting(); });
+  clip.addEventListener('pause', function () {
+    if (S.phase === 'running' && !userStopped && !clip.ended) { S.paused = true; render(); tick(); }
+  });
+
+  /* ---------------- Sharing via LINE ---------------- */
+  function liffUrl(ulb) { return 'https://liff.line.me/' + CFG.LIFF_ID + (ulb ? '?ulb=' + ulb : ''); }
+  function card(top, title, sub, button, uri) {
+    return {
+      type: 'flex', altText: title,
+      contents: {
+        type: 'bubble', size: 'kilo',
+        body: { type: 'box', layout: 'vertical', spacing: 'sm', contents: [
+          { type: 'text', text: top, size: 'xs', color: '#B45309', weight: 'bold' },
+          { type: 'text', text: title, size: 'md', weight: 'bold', color: '#1E2E78', wrap: true },
+          { type: 'text', text: sub, size: 'sm', color: '#5B6478', wrap: true }
+        ] },
+        footer: { type: 'box', layout: 'vertical', contents: [
+          { type: 'button', style: 'primary', color: '#06C755', height: 'sm', action: { type: 'uri', label: button, uri: uri } }
+        ] }
+      }
+    };
+  }
+  function toast(msg) {
+    var t = document.createElement('div'); t.className = 'toast'; t.textContent = msg;
+    document.body.appendChild(t); setTimeout(function () { t.remove(); }, 2600);
+  }
+  function pickAndSend(msg) {
+    if (liff.isApiAvailable && liff.isApiAvailable('shareTargetPicker')) {
+      return liff.shareTargetPicker([msg], { isMultiple: true }).then(function (r) { return !!r; });
+    }
+    return Promise.reject(new Error('NO_PICKER'));
+  }
+  function shareDone() {
+    var me = S.state.me, max = S.state.maxPerDay;
+    var extra = me.todayN >= max ? 'ครบ ' + max + ' ครั้งวันนี้' : 'ครั้งที่ ' + me.todayN + ' ของวัน';
+    if (S.result && S.result.before && me.level > (S.result.before.level || 0)) extra += ' · ได้ ' + LV_NAMES[me.level].replace(/^LV\d · /, '') + ' (LV' + me.level + ')';
+    var msg = card('ULB · นั่งสมาธิ 5 นาที', me.nickname + ' เพิ่งนั่งเสร็จ', extra, 'นั่งตามเลย', liffUrl(me.ulb));
+    var ctx = (liff.getContext && liff.getContext()) || {};
+    var inChat = ctx.type === 'group' || ctx.type === 'room' || ctx.type === 'utou';
+    var send = inChat
+      ? liff.sendMessages([msg]).then(function () { return true; }).catch(function () { return pickAndSend(msg); })
+      : pickAndSend(msg);
+    send.then(function (ok) { if (ok) { S.shared = true; render(); } })
+      .catch(function () { toast('ส่งไม่สำเร็จ ลองเปิดแอปจากในไลน์'); });
+  }
+  function invite() {
+    var me = S.state.me;
+    var msg = card('ULB · ชวนนั่งสมาธิ', me.nickname + ' ชวนคุณมานั่งกับ ULB ' + me.ulb, 'นั่งสมาธิ 5 นาที กดแล้วเริ่มได้เลย ไม่ต้องโหลดแอป', 'นั่งเลย', liffUrl(me.ulb));
+    pickAndSend(msg).then(function (ok) { if (ok) toast('ส่งชวนแล้ว'); })
+      .catch(function () {
+        var url = liffUrl(me.ulb);
+        if (navigator.clipboard) navigator.clipboard.writeText(url).then(function () { toast('คัดลอกลิงก์ชวนแล้ว ไปวางในไลน์ได้เลย'); });
+        else toast(url);
+      });
+  }
+
+  /* ---------------- Level ---------------- */
+  function viewLevel() {
+    var me = S.state.me, R = S.state.rules, max = S.state.maxPerDay;
+    var pct = Math.min(100, Math.round(me.score / me.maxScore * 100));
+    function row(n, rule, have, goal, unit) {
+      var earned = me.level >= n, p = Math.min(100, Math.round(have / goal * 100));
+      return '<div class="row" style="gap:12px;padding:12px 0;border-bottom:1px solid #E8ECF3">' +
+        '<div style="width:76px;flex-shrink:0;display:flex;justify-content:flex-start">' + levelIcons(n, 23, !earned) + '</div>' +
+        '<div class="grow col" style="gap:4px"><div class="row between" style="align-items:baseline"><div style="font-size:15px;font-weight:700;color:var(--navy)">' + LV_NAMES[n] + '</div>' +
+        '<div class="xs" style="color:var(--body2);white-space:nowrap">' + (earned ? 'ได้แล้ว' : 'อีก ' + Math.max(0, goal - have) + ' ' + unit) + '</div></div>' +
+        '<div class="small muted">' + rule + '</div><div class="bar"><div style="width:' + p + '%"></div></div></div></div>';
+    }
+    return '<div class="page"><div class="h1">Level</div>' +
+      '<div class="card col" style="gap:8px;align-items:center;padding:18px 16px 16px"><div style="height:68px;display:flex;align-items:center">' + levelIcons(me.level, 54) + '</div>' +
+      '<div style="font-size:22px;font-weight:700;color:var(--navy)">' + LV_NAMES[me.level] + '</div>' +
+      '<div class="row between" style="width:100%;align-items:baseline"><div class="small" style="color:var(--body2)">คะแนน 28 วันล่าสุด (4 สัปดาห์)</div>' +
+      '<div style="font-size:20px;font-weight:700;color:var(--navy)">' + me.score + ' <span class="small" style="font-weight:400;color:var(--body2)">/ ' + me.maxScore + '</span></div></div>' +
+      '<div class="bar" style="width:100%;height:8px"><div style="width:' + pct + '%"></div></div>' +
+      '<div class="small" style="width:100%;color:var(--body2)">' + esc(nextText(me)) + '</div>' +
+      '<div class="row" style="width:100%"><div class="grow" style="padding:10px 12px;background:var(--bg);border-radius:12px"><div style="font-size:20px;font-weight:600;color:var(--navy)">' + me.streak + ' วัน</div><div class="xs muted">นั่งครบติดกัน</div></div>' +
+      '<div class="grow" style="padding:10px 12px;background:var(--bg);border-radius:12px"><div style="font-size:20px;font-weight:600;color:var(--navy)">' + me.dropTomorrow + '</div><div class="xs muted">คะแนนที่จะหลุดพรุ่งนี้</div></div></div></div>' +
+      '<div class="card" style="padding:4px 16px">' +
+      row(1, R.lv1 + ' คะแนน ≈ นั่งครบ 3 วัน/สัปดาห์', me.score, R.lv1, 'คะแนน') +
+      row(2, R.lv2 + ' คะแนน ≈ นั่งครบ 5 วัน/สัปดาห์', me.score, R.lv2, 'คะแนน') +
+      row(3, R.lv3 + ' คะแนน ≈ แทบทุกวัน', me.score, R.lv3, 'คะแนน') +
+      row(4, 'นั่งครบทุกวัน ' + R.lv4Streak + ' วันติด (' + Math.round(R.lv4Streak / 7) + ' สัปดาห์)', me.streak, R.lv4Streak, 'วัน') +
+      row(5, 'นั่งครบทุกวัน ' + R.lv5Streak + ' วันติด (' + Math.round(R.lv5Streak / 7) + ' สัปดาห์)', me.streak, R.lv5Streak, 'วัน') + '</div>' +
+      '<div class="small" style="color:var(--body2);line-height:1.6;padding:0 4px">นั่ง 1 ครั้ง = 1 คะแนน · วันไหนนั่งครบ ' + max + ' ครั้ง +1 โบนัส<br>นับย้อนหลัง ' + R.windowDays + ' วัน (4 สัปดาห์) คะแนนวันเก่าหลุดออกทุกวัน ไม่มีวันรีเซ็ต</div></div>';
+  }
+
+  /* ---------------- ULB Cup ---------------- */
+  var TH_MONTHS = ['มกราคม', 'กุมภาพันธ์', 'มีนาคม', 'เมษายน', 'พฤษภาคม', 'มิถุนายน', 'กรกฎาคม', 'สิงหาคม', 'กันยายน', 'ตุลาคม', 'พฤศจิกายน', 'ธันวาคม'];
+  function viewCup() {
+    var st = S.state, cup = st.cup, me = st.me, lanes = cup.lanes;
+    var h = '<div class="page">';
+    h += '<div class="row between" style="align-items:flex-start"><div class="col" style="gap:2px">' +
+      '<div class="small" style="color:var(--orange-text);font-weight:700;letter-spacing:1px">ULB CUP · ' + TH_MONTHS[+cup.month.slice(5, 7) - 1] + '</div>' +
+      '<div class="h1">รุ่นไหนจะได้แชมป์</div>' +
+      (cup.lastChampion ? '<div class="small muted">แชมป์เดือนที่แล้ว ULB ' + cup.lastChampion + '</div>' : '') + '</div>' +
+      '<div class="card col" style="padding:6px 12px;align-items:center"><div style="font-size:20px;font-weight:700;color:var(--navy)">' + cup.daysLeft + '</div><div class="xs muted">วันที่เหลือ</div></div></div>';
+
+    var hs = [92, 68, 52], bg = ['#263A96', '#C3CAD7', '#E3E8F2'], fg = ['#fff', '#18245F', '#18245F'];
+    var order = lanes.length >= 3 ? [1, 0, 2] : lanes.length === 2 ? [1, 0] : [0];
+    h += '<div class="card podium"><button class="help" data-act="help" aria-label="คะแนนคิดยังไง">?</button>';
+    if (lanes.length) {
+      order.forEach(function (i) {
+        var l = lanes[i];
+        h += '<div class="pcol">' + (i === 0 ? '<svg width="28" height="20" viewBox="0 0 30 22" fill="' + ORANGE + '" aria-hidden="true">' + CROWN_LINE + '</svg>' : '') +
+          '<div style="font-size:16px;font-weight:700;color:var(--navy)">ULB ' + l.ulb + '</div><div class="xs muted">' + l.score.toFixed(1) + ' คะแนน/คน</div>' +
+          '<div class="pblock" style="height:' + hs[i] + 'px;background:' + bg[i] + ';color:' + fg[i] + '">' + (i + 1) + '</div></div>';
+      });
+    } else h += '<div class="muted small" style="align-self:center;margin:auto">ยังไม่มีคะแนนเดือนนี้</div>';
+    h += '</div>';
+    if (S.help) h += '<div class="helpbox"><div style="font-weight:700;font-size:14px">คะแนนรุ่นคิดยังไง</div>' +
+      '<div>คะแนนเฉลี่ยต่อคนในเดือนนี้ รุ่นเล็กกับรุ่นใหญ่จึงแข่งกันได้แฟร์</div>' +
+      '<div>วันไหนทุกคนในรุ่นนั่งครบ ' + st.maxPerDay + ' ครั้ง รุ่นได้ +1</div><div>เริ่มนับใหม่ทุกวันที่ 1 ของเดือน</div></div>';
+
+    var gapText = me.ulbRank === 1 ? 'รุ่นเรานำอยู่ รักษาไว้ให้ได้ถึงสิ้นเดือน'
+      : me.ulbGap ? 'ตามหลัง ULB ' + me.ulbGap.ulb + ' อีก ' + me.ulbGap.points + ' คะแนน วันไหนทุกคนในรุ่นนั่งครบ ' + st.maxPerDay + ' ครั้ง รุ่นได้โบนัส +1' : '';
+    h += '<div class="card col" style="gap:12px;border:2px solid var(--navy)"><div class="row between"><div style="font-size:17px;font-weight:700;color:var(--navy)">รุ่นเรา · ULB ' + me.ulb + '</div>' +
+      '<div style="font-size:14px;font-weight:700;color:var(--navy)">อันดับ ' + me.ulbRank + '</div></div>' +
+      (gapText ? '<div style="font-size:14px;color:#3F485A;line-height:1.55">' + esc(gapText) + '</div>' : '');
+    me.team.forEach(function (m) {
+      var full = m.todayN >= st.maxPerDay;
+      h += '<div class="row"><div class="avatar' + (m.todayN > 0 ? '' : ' idle') + '" style="width:38px;height:38px;font-size:15px;' + (m.todayN > 0 ? 'background:var(--blue);color:#fff' : 'background:transparent;border:2px dashed var(--dash);color:var(--muted)') + '">' + face(m.nickname, m.picture) + '</div>' +
+        '<div class="grow col"><div style="font-size:15px;font-weight:600">' + esc(m.nickname) + (m.me ? ' (คุณ)' : '') + '</div><div class="xs muted">วันนี้นั่งแล้ว ' + m.todayN + '/' + st.maxPerDay + ' ครั้ง</div></div>' +
+        (full ? '<div class="small" style="font-weight:600;color:var(--navy)">ครบแล้ว</div>' : !m.me ? '<button class="btn green" data-act="invite" style="width:auto;min-height:40px;padding:0 14px;font-size:14px;border-radius:20px">ชวนมานั่ง</button>' : '') + '</div>';
+    });
+    if (me.groupUrl) h += '<a class="small" href="' + esc(me.groupUrl) + '" style="text-align:center;font-weight:600">เข้ากลุ่มไลน์ ULB ' + me.ulb + '</a>';
+    h += '</div>';
+
+    var top = lanes.length ? Math.max(lanes[0].score, 0.1) : 1;
+    h += '<div class="card col" style="gap:4px">';
+    lanes.forEach(function (l, i) {
+      h += '<div class="lane' + (l.ulb === me.ulb ? ' me' : '') + '"><div style="width:52px;font-size:13px;font-weight:700;color:var(--navy)">ULB ' + l.ulb + '</div>' +
+        '<div class="track"><div class="runner' + (i === 0 ? ' first' : '') + '" data-left="' + (Math.round(l.score / top * 88) + 6) + '" style="left:6%"><svg width="13" height="13" viewBox="0 0 24 24" fill="#fff" aria-hidden="true">' + STAR + '</svg></div></div>' +
+        '<div style="width:40px;text-align:right;font-size:14px;font-weight:700;color:var(--navy)">' + l.score.toFixed(1) + '</div></div>';
+    });
+    h += '</div></div>';
+    return h;
+  }
+  function moveRunners() {
+    var rs = document.querySelectorAll('.runner');
+    for (var i = 0; i < rs.length; i++) rs[i].style.left = rs[i].getAttribute('data-left') + '%';
+  }
+
+  /* ---------------- Ranking ---------------- */
+  function viewRank() {
+    var st = S.state, p = S.period, max = st.maxPerDay;
+    var rows = st.ranking.slice().sort(function (a, b) { return (b[p] - a[p]) || (b.score - a.score) || a.nickname.localeCompare(b.nickname, 'th'); });
+    var meRank = 0; rows.forEach(function (r, i) { if (r.me) meRank = i + 1; });
+    var h = '<div class="page"><div class="h1">อันดับ</div><div class="chips">';
+    [['today', 'วันนี้'], ['score', '28 วันล่าสุด (4 สัปดาห์)']].forEach(function (x) {
+      h += '<button class="chip' + (p === x[0] ? ' on' : '') + '" data-period="' + x[0] + '">' + x[1] + '</button>';
+    });
+    h += '</div><div class="card row between"><div style="font-size:15px;color:var(--body2)">' + (p === 'today' ? 'วันนี้นั่งแล้ว' : 'คุณอยู่อันดับ') + '</div>' +
+      '<div style="font-size:22px;font-weight:700;color:var(--navy)">' + (p === 'today' ? st.satToday + ' จาก ' + st.totalMembers + ' คน' : 'ที่ ' + meRank) + '</div></div>';
+    h += '<button class="btn green" data-act="invite" style="min-height:48px;font-size:16px">+ ชวนเพื่อนมานั่งด้วยกัน</button>';
+    h += '<div class="card" style="padding:4px 0">';
+    rows.forEach(function (r, i) {
+      h += '<div class="rank-row' + (r.me ? ' me' : '') + '"><div style="width:22px;text-align:center;font-weight:600" class="muted">' + (i + 1) + '</div>' +
+        '<div class="avatar" style="width:36px;height:36px;font-size:15px">' + face(r.nickname, r.picture) + '</div>' +
+        '<div class="grow col"><div class="row" style="gap:6px"><div style="font-size:16px;font-weight:600">' + esc(r.nickname) + '</div>' + (r.level > 0 ? levelIcons(r.level, 17) : '') + '</div>' +
+        '<div class="xs muted">ULB ' + r.ulb + (p === 'today' ? (r.today ? ' · วันนี้ ' + r.today + ' ครั้ง' : ' · ยังไม่ได้นั่ง') : '') + '</div></div>';
+      if (p === 'today') {
+        h += '<div class="sdots">';
+        for (var k = 1; k <= max; k++) h += '<div class="sdot' + (r.today >= k ? ' on' : '') + '">' + k + '</div>';
+        h += '</div>';
+      } else {
+        h += '<div class="col" style="align-items:flex-end"><div style="font-size:18px;font-weight:700;color:var(--navy)">' + r.score + '</div><div class="xs muted">คะแนน</div></div>';
+      }
+      h += '</div>';
+    });
+    return h + '</div></div>';
+  }
+
+  /* ---------------- Events ---------------- */
+  app.addEventListener('click', function (e) {
+    var t = e.target.closest('[data-go],[data-act],[data-period],[data-ulb]');
+    if (!t) return;
+    if (t.hasAttribute('data-ulb')) { S.regUlb = parseInt(t.getAttribute('data-ulb'), 10); S.error = ''; render(); return; }
+    if (t.hasAttribute('data-go')) { if (S.phase === 'done') S.phase = 'idle'; go(t.getAttribute('data-go')); return; }
+    if (t.hasAttribute('data-period')) { S.period = t.getAttribute('data-period'); render(); return; }
+    var a = t.getAttribute('data-act');
+    if (a === 'start') startSitting();
+    else if (a === 'cancel') { stopSitting(); S.phase = 'idle'; S.paused = false; render(); }
+    else if (a === 'resume') { S.paused = false; clip.play(); render(); tick(); }
+    else if (a === 'skip') finishSitting();
+    else if (a === 'home') { S.phase = 'idle'; render(); refresh(); }
+    else if (a === 'shareDone') shareDone();
+    else if (a === 'invite') invite();
+    else if (a === 'help') { S.help = !S.help; render(); }
+  });
+  app.addEventListener('submit', function (e) { if (e.target.id === 'regForm') submitRegister(e); });
+  document.addEventListener('visibilitychange', function () { if (!document.hidden) refresh(); });
+  setInterval(function () { if (!document.hidden) refresh(); }, 60000);
+
+  if (MOCK) {
+    var s = document.createElement('script'); s.src = 'mock.js'; s.onload = boot;
+    s.onerror = function () { app.innerHTML = '<div class="page"><div class="card err">ยังไม่ได้ตั้งค่า LIFF_ID และ API_URL ในไฟล์ index.html</div></div>'; };
+    document.head.appendChild(s);
+  } else {
+    boot();
+  }
+})();
+</script>
+</body>
+</html>
