@@ -134,6 +134,8 @@ label,.label{font-size:15px;font-weight:600}
   var BELL_TIMES = [61, 121.2, 181.7, 242.2, 300.1];
   var params = new URLSearchParams(location.search);
   var MOCK = params.get('mock') === '1' || CFG.LIFF_ID.indexOf('PUT_') === 0;
+  // โค้ดของหน้านี้ที่กำลังรันอยู่ ใช้เทียบกับไฟล์ล่าสุดบนเว็บ (ดู checkUpdate)
+  var MY_SRC = (document.currentScript && document.currentScript.text) || '';
 
   /* ---------------- Icons ---------------- */
   var ORANGE = '#F5A42C';
@@ -252,7 +254,31 @@ label,.label{font-size:15px;font-weight:600}
     setTimeout(function () { clip.preload = 'auto'; try { clip.load(); } catch (e) {} }, 1500);
   }
 
+  /*
+   * ไลน์มักเก็บหน้าเว็บเวอร์ชันเก่าไว้ (แคช) — ตอนเปิดแอปจะโหลดไฟล์ล่าสุดมาเทียบ
+   * ถ้าโค้ดไม่ตรงกัน แปลว่ามีเวอร์ชันใหม่ → โหลดหน้าใหม่ให้เองหนึ่งครั้ง
+   */
+  function checkUpdate() {
+    if (MOCK || !MY_SRC || !window.fetch) return;
+    var KEY = 'ulb_upd_at', last = 0;
+    try { last = +sessionStorage.getItem(KEY) || 0; } catch (e) {}
+    if (Date.now() - last < 120000) return; // เพิ่งโหลดใหม่ไป ไม่วนซ้ำ
+    var norm = function (s) { return s.replace(/\r\n?/g, '\n'); };
+    fetch(location.pathname + '?_check=' + Date.now(), { cache: 'no-store' })
+      .then(function (r) { return r.ok ? r.text() : null; })
+      .then(function (html) {
+        if (!html || norm(html).indexOf(norm(MY_SRC)) >= 0) return; // ล่าสุดแล้ว
+        if (S.phase === 'running') return; // กำลังนั่งอยู่ ไม่รบกวน
+        try { sessionStorage.setItem(KEY, String(Date.now())); } catch (e) {}
+        var u = new URL(location.href);
+        u.searchParams.set('_v', String(Date.now()));
+        location.replace(u.toString());
+      })
+      .catch(function () {});
+  }
+
   function boot() {
+    checkUpdate();
     var start = MOCK ? window.ULBMock.boot().then(function (m) { api = m.api; window.liff = m.liff; })
                      : Promise.resolve();
     var cache = MOCK ? null : loadCache();
