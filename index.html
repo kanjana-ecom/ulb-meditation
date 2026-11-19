@@ -443,8 +443,8 @@ label,.label{font-size:15px;font-weight:600}
 
     var labels = ['จ', 'อ', 'พ', 'พฤ', 'ศ', 'ส', 'อา'];
     h += '<div class="card col" style="gap:10px" data-go="stars" role="link" tabindex="0">' +
-      '<div class="row between" style="align-items:baseline"><div style="font-size:15px;font-weight:700;color:var(--navy)">' + me.count + ' / ' + me.maxCount + ' ครั้ง</div>' +
-      '<div class="xs muted">28 วันล่าสุด (4 สัปดาห์)</div></div><div class="week">';
+      '<div class="row between" style="align-items:baseline"><div style="font-size:15px;font-weight:700;color:var(--navy)">' + me.count + ' ครั้ง</div>' +
+      '<div class="xs muted">' + Math.round(S.state.rules.windowDays / 7) + ' สัปดาห์ล่าสุด</div></div><div class="week">';
     me.last7.forEach(function (d, i) {
       var cls = d.n >= max ? 'full' : i === 6 ? 'today' : d.n > 0 ? 'part' : 'future';
       h += '<div class="wday"><div class="wbox ' + cls + '">' + (cls === 'full' ? CHECK : d.n > 0 || i === 6 ? d.n + '/' + max : '') + '</div><div class="xs muted">' + (i === 6 ? 'วันนี้' : labels[d.dow]) + '</div></div>';
@@ -621,7 +621,12 @@ label,.label{font-size:15px;font-weight:600}
   /* ---------------- Level ---------------- */
   function viewLevel() {
     var me = S.state.me, R = S.state.rules, max = S.state.maxPerDay, W = R.windowDays;
-    var pct = Math.min(100, Math.round(me.count / me.maxCount * 100));
+    var WK = Math.round(W / 7);
+    // แถบความคืบหน้าวิ่งไปหาเลเวลถัดไป
+    var pct = !me.next ? 100 : me.next.level === 5
+      ? Math.round(me.count5 / R.lv5 * 100)
+      : Math.round(me.count / [R.lv1, R.lv2, R.lv3, R.lv4][me.next.level - 1] * 100);
+    pct = Math.max(0, Math.min(100, pct));
     // คำกำกับเกณฑ์ เช่น "42 ครั้ง ≈ นั่งครบ 2 สัปดาห์" (ไม่ต้องนั่งติดกัน)
     function approx(goal) {
       var fullDays = goal / max, weeks = fullDays / 7;
@@ -639,16 +644,17 @@ label,.label{font-size:15px;font-weight:600}
     return '<div class="page"><div class="h1">Level ของคุณ</div>' +
       '<div class="card col" style="gap:8px;align-items:center;padding:18px 16px 16px"><div style="height:68px;display:flex;align-items:center">' + levelIcons(me.level, 54) + '</div>' +
       '<div style="font-size:22px;font-weight:700;color:var(--navy)">' + LV_NAMES[me.level] + '</div>' +
-      '<div style="width:100%;font-size:20px;font-weight:700;color:var(--navy)">' + me.count + ' / ' + me.maxCount + ' ครั้ง <span class="small" style="font-weight:400;color:var(--body2)">· นั่งใน ' + W + ' วันล่าสุด</span></div>' +
+      '<div style="width:100%;font-size:28px;font-weight:700;color:var(--navy);line-height:1.2">' + me.count + ' ครั้ง</div>' +
+      '<div class="small" style="width:100%;margin-top:-6px;color:var(--body2)">ใน ' + WK + ' สัปดาห์ล่าสุด</div>' +
       '<div class="bar" style="width:100%;height:8px"><div style="width:' + pct + '%"></div></div>' +
       '<div class="small" style="width:100%;color:var(--body2)">' + esc(nextText(me)) + '</div>' +
-      '<div class="small" style="width:100%;padding:10px 12px;background:var(--bg);border-radius:12px;color:var(--body2);line-height:1.6">นั่ง 1 ครั้งนับ 1 วันละไม่เกิน ' + max + ' ครั้ง นับย้อนหลัง ' + W + ' วัน ครั้งที่เก่ากว่านั้นหลุดออกทุกวัน</div></div>' +
+      '<div class="small" style="width:100%;padding:10px 12px;background:var(--bg);border-radius:12px;color:var(--body2);line-height:1.6">นับทุกครั้งที่นั่ง วันละไม่เกิน ' + max + ' ครั้ง แต่ละครั้งนับอยู่ ' + WK + ' สัปดาห์ แล้วจะหายไป</div></div>' +
       '<div class="card" style="padding:4px 16px">' +
       row(1, R.lv1 + ' ครั้ง ' + approx(R.lv1), me.count, R.lv1) +
       row(2, R.lv2 + ' ครั้ง ' + approx(R.lv2), me.count, R.lv2) +
       row(3, R.lv3 + ' ครั้ง ' + approx(R.lv3), me.count, R.lv3) +
       row(4, R.lv4 + ' ครั้ง ' + approx(R.lv4), me.count, R.lv4) +
-      row(5, R.lv5 + ' ครั้งใน ' + R.lv5Days + ' วัน ' + approx(R.lv5), me.count5, R.lv5, me.count5 + '/' + R.lv5 + ' ใน ' + R.lv5Days + ' วัน') + '</div>' +
+      row(5, R.lv5 + ' ครั้ง ' + approx(R.lv5), me.count5, R.lv5) + '</div>' +
       '</div>';
   }
   function viewCredit() {
@@ -725,7 +731,7 @@ label,.label{font-size:15px;font-weight:600}
     var rows = st.ranking.slice().sort(function (a, b) { return (b[p] - a[p]) || (b.count - a.count) || a.nickname.localeCompare(b.nickname, 'th'); });
     var meRank = 0; rows.forEach(function (r, i) { if (r.me) meRank = i + 1; });
     var h = '<div class="page"><div class="h1">อันดับ</div><div class="chips">';
-    [['today', 'วันนี้'], ['count', st.rules.windowDays + ' วันล่าสุด (4 สัปดาห์)']].forEach(function (x) {
+    [['today', 'วันนี้'], ['count', Math.round(st.rules.windowDays / 7) + ' สัปดาห์ล่าสุด']].forEach(function (x) {
       h += '<button class="chip' + (p === x[0] ? ' on' : '') + '" data-period="' + x[0] + '">' + x[1] + '</button>';
     });
     h += '</div><div class="card row between"><div style="font-size:15px;color:var(--body2)">' + (p === 'today' ? 'วันนี้นั่งแล้ว' : 'คุณอยู่อันดับ') + '</div>' +
