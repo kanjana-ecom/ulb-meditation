@@ -18,53 +18,47 @@ function monthEnd(d) {
   var p = ymd_(d);
   return new Date(Date.UTC(p[0], p[1] + 1, 0)).toISOString().slice(0, 10);
 }
-var DEFAULT_RULES = { maxPerDay: 3, windowDays: 28, lv1: 48, lv2: 80, lv3: 104, lv4Streak: 28, lv5Streak: 56 };
+var DEFAULT_RULES = { maxPerDay: 3, windowDays: 28, lv1: 36, lv2: 60, lv3: 78, lv4: 84, lv5: 168, lv5Days: 56 };
 
 /**
- * คะแนน: นั่ง 1 ครั้ง = 1 คะแนน (นับสูงสุด maxPerDay ครั้ง/วัน) + วันไหนนั่งครบ = โบนัส 1 คะแนน
- * Level ใช้คะแนนย้อนหลัง windowDays วัน (rolling) — คะแนนเก่าหลุดออกทุกวัน ไม่มีวันรีเซ็ต
+ * นับเป็น "จำนวนครั้งที่นั่ง": นั่ง 1 ครั้ง = 1 (นับสูงสุด maxPerDay ครั้ง/วัน) ไม่มีโบนัส
+ * Level ใช้จำนวนครั้งย้อนหลัง windowDays วัน (rolling) — ครั้งที่เก่ากว่านั้นหลุดออกทุกวัน ไม่มีวันรีเซ็ต
+ *   LV1–LV4: จำนวนครั้งใน windowDays วัน ≥ lv1..lv4
+ *   LV5: จำนวนครั้งใน lv5Days วัน ≥ lv5
  */
 function computeState(members, sessions, today, nowMs, meId, groups, rules) {
   var R = {};
   Object.keys(DEFAULT_RULES).forEach(function (k) { R[k] = (rules && rules[k] != null && rules[k] !== '') ? Number(rules[k]) : DEFAULT_RULES[k]; });
-  var max = R.maxPerDay, W = R.windowDays;
+  var max = R.maxPerDay, W = R.windowDays, W5 = R.lv5Days;
   var counts = {};
   sessions.forEach(function (s) {
     var c = counts[s.userId] || (counts[s.userId] = {});
     c[s.date] = (c[s.date] || 0) + 1;
   });
   function n(u, d) { return Math.min(max, (counts[u] && counts[u][d]) || 0); }
-  function full(u, d) { return n(u, d) >= max; }
-  function pts(u, d) { var k = n(u, d); return k + (k >= max ? 1 : 0); }
-  var winStart = addDays(today, -(W - 1));
-  function sumPts(u, from, to) { var t = 0, d = from; while (d <= to) { t += pts(u, d); d = addDays(d, 1); } return t; }
   function countRange(u, from, to) { var t = 0, d = from; while (d <= to) { t += n(u, d); d = addDays(d, 1); } return t; }
-  function streak(u) {
-    var d = full(u, today) ? today : addDays(today, -1), s = 0;
-    while (full(u, d) && s < 1000) { s++; d = addDays(d, -1); }
-    return s;
+  var winStart = addDays(today, -(W - 1)), win5Start = addDays(today, -(W5 - 1));
+  function stats(u) {
+    var c = countRange(u, winStart, today), c5 = countRange(u, win5Start, today), lv = 0;
+    if (c5 >= R.lv5) lv = 5;
+    else if (c >= R.lv4) lv = 4;
+    else if (c >= R.lv3) lv = 3;
+    else if (c >= R.lv2) lv = 2;
+    else if (c >= R.lv1) lv = 1;
+    return { count: c, count5: c5, level: lv };
   }
-  function levelOf(score, st) {
-    if (st >= R.lv5Streak) return 5;
-    if (st >= R.lv4Streak) return 4;
-    if (score >= R.lv3) return 3;
-    if (score >= R.lv2) return 2;
-    if (score >= R.lv1) return 1;
-    return 0;
-  }
+  var statsById = {};
+  members.forEach(function (m) { statsById[m.userId] = stats(m.userId); });
+  function levelOf(u) { return statsById[u] ? statsById[u].level : 0; }
+
   function cup(mStart, upTo) {
     var byUlb = {};
     members.forEach(function (m) { if (m.joined <= upTo) (byUlb[m.ulb] || (byUlb[m.ulb] = [])).push(m); });
     var lanes = Object.keys(byUlb).map(function (k) {
-      var list = byUlb[k], sum = 0, bonus = 0, d = mStart;
-      list.forEach(function (m) { sum += sumPts(m.userId, mStart, upTo); });
-      while (d <= upTo) {
-        var active = list.filter(function (m) { return m.joined <= d; });
-        if (active.length && active.every(function (m) { return full(m.userId, d); })) bonus++;
-        d = addDays(d, 1);
-      }
-      // คะแนนรุ่น = คะแนนเฉลี่ยต่อคนในเดือนนี้ + วันที่ครบทั้งทีม (วันละ +1)
-      return { ulb: +k, members: list.length, bonusDays: bonus, score: Math.round((sum / list.length + bonus) * 10) / 10 };
+      var list = byUlb[k], sum = 0;
+      list.forEach(function (m) { sum += countRange(m.userId, mStart, upTo); });
+      // คะแนนรุ่น = จำนวนครั้งเฉลี่ยต่อคนในเดือนนี้
+      return { ulb: +k, members: list.length, score: Math.round(sum / list.length * 10) / 10 };
     });
     lanes.sort(function (a, b) { return b.score - a.score || a.ulb - b.ulb; });
     return lanes;
@@ -78,11 +72,11 @@ function computeState(members, sessions, today, nowMs, meId, groups, rules) {
   var prevLanes = cup(monthStart(prevEnd), prevEnd);
 
   var ranking = members.map(function (m) {
-    var sc = sumPts(m.userId, winStart, today);
+    var s = statsById[m.userId];
     return {
       nickname: m.nickname, picture: m.picture || '', ulb: m.ulb, me: m.userId === meId,
-      today: n(m.userId, today), score: sc, month: countRange(m.userId, mStart, today),
-      level: levelOf(sc, streak(m.userId))
+      today: n(m.userId, today), count: s.count, month: countRange(m.userId, mStart, today),
+      level: s.level
     };
   });
 
@@ -93,7 +87,7 @@ function computeState(members, sessions, today, nowMs, meId, groups, rules) {
     .map(function (s) {
       var m = byId[s.userId], nth = 0;
       sessions.forEach(function (x) { if (x.userId === s.userId && x.date === s.date && x.at <= s.at) nth++; });
-      return { nickname: m.nickname, picture: m.picture || '', ulb: m.ulb, nth: Math.min(nth, max), at: s.at, me: s.userId === meId };
+      return { nickname: m.nickname, picture: m.picture || '', ulb: m.ulb, nth: Math.min(nth, max), at: s.at, me: s.userId === meId, level: levelOf(s.userId) };
     });
 
   var out = {
@@ -113,37 +107,32 @@ function computeState(members, sessions, today, nowMs, meId, groups, rules) {
   };
 
   if (me) {
-    var u = me.userId, score = sumPts(u, winStart, today), st = streak(u), lv = levelOf(score, st);
+    var u = me.userId, ms = statsById[u], lv = ms.level;
     var last7 = [];
     for (var i = 6; i >= 0; i--) { var d = addDays(today, -i); last7.push({ date: d, dow: dayOfWeek(d), n: n(u, d) }); }
-    var fullDays = 0;
-    for (var j = 0; j < W; j++) if (full(u, addDays(today, -j))) fullDays++;
     var next = null;
-    if (lv < 3) { var goal = [R.lv1, R.lv2, R.lv3][lv]; next = { level: lv + 1, points: goal - score }; }
-    else if (lv < 5) { var g2 = lv === 3 ? R.lv4Streak : R.lv5Streak; next = { level: lv + 1, days: g2 - st }; }
+    if (lv < 4) next = { level: lv + 1, need: Math.max(1, [R.lv1, R.lv2, R.lv3, R.lv4][lv] - ms.count), days: W };
+    else if (lv < 5) next = { level: 5, need: Math.max(1, R.lv5 - ms.count5), days: W5 };
     var myIdx = -1;
     lanes.forEach(function (l, k) { if (l.ulb === me.ulb) myIdx = k; });
     var gap = null;
     if (myIdx > 0) {
       var above = lanes[myIdx - 1], mine = lanes[myIdx];
-      gap = { ulb: above.ulb, points: Math.max(1, Math.ceil((above.score - mine.score) * mine.members - 1e-9)) };
+      gap = { ulb: above.ulb, count: Math.max(1, Math.ceil((above.score - mine.score) * mine.members - 1e-9)) };
     }
     out.me = {
       nickname: me.nickname, picture: me.picture || '', ulb: me.ulb,
       todayN: n(u, today),
-      todayPts: pts(u, today),
-      score: score,
-      maxScore: W * (max + 1),
-      fullDays: fullDays,
-      streak: st,
+      count: ms.count,
+      maxCount: W * max,
+      count5: ms.count5,
       level: lv,
       next: next,
-      dropTomorrow: pts(u, winStart),
       last7: last7,
       ulbRank: myIdx + 1,
       ulbGap: gap,
       team: members.filter(function (m) { return m.ulb === me.ulb; }).map(function (m) {
-        return { nickname: m.nickname, picture: m.picture || '', todayN: n(m.userId, today), me: m.userId === meId };
+        return { nickname: m.nickname, picture: m.picture || '', todayN: n(m.userId, today), me: m.userId === meId, level: levelOf(m.userId) };
       }),
       groupUrl: (groups && groups[me.ulb]) || ''
     };
@@ -170,6 +159,13 @@ function computeState(members, sessions, today, nowMs, meId, groups, rules) {
     }
     var t = Math.floor(rnd() * 3);
     for (var j3 = 0; j3 < t; j3++) sessions.push({ userId: m.userId, date: today, at: now - (5 + i * 7 + j3 * 90) * 60000 });
+  });
+  // คนนั่งครบทุกวัน: ปราง 56 วัน (LV5 Master), ภูมิ 28 วัน (LV4 Pro)
+  [['ปราง', 1, 56], ['ภูมิ', 1, 28]].forEach(function (x, i) {
+    var id = 'full' + i;
+    members.push({ userId: id, nickname: x[0], ulb: x[1], joined: '2026-01-01', picture: FACE(i + 2) });
+    for (var d = x[2] - 1; d >= 1; d--) for (var j = 0; j < 3; j++) sessions.push({ userId: id, date: addDays(today, -d), at: now - d * 86400000 + j * 3600000 });
+    for (var k = 0; k < 3; k++) sessions.push({ userId: id, date: today, at: now - (40 + i * 20 + k * 6) * 60000 });
   });
   var registered = new URLSearchParams(location.search).get('new') !== '1';
   if (registered) {

@@ -112,6 +112,10 @@ label,.label{font-size:15px;font-weight:600}
 .toast{position:fixed;left:50%;bottom:96px;transform:translateX(-50%);background:var(--navy);color:#fff;padding:10px 16px;border-radius:12px;font-size:14px;z-index:9;max-width:90vw;text-align:center}
 .loading{flex:1;display:flex;align-items:center;justify-content:center;color:var(--muted)}
 .err{color:#B42318;font-size:14px}
+.credit{display:block;margin:8px auto 0;background:none;border:none;color:var(--muted);opacity:.7;font-size:11px;cursor:pointer;min-height:32px;padding:0 8px}
+.modal{position:fixed;inset:0;background:rgba(17,24,52,.45);display:flex;align-items:center;justify-content:center;padding:24px 16px;z-index:10}
+.modal .card{width:100%;max-width:320px;display:flex;flex-direction:column;align-items:center;gap:6px;text-align:center;padding:22px 20px 18px}
+.namelv{display:inline-flex;align-items:center;gap:6px;vertical-align:middle}
 </style>
 </head>
 <body>
@@ -122,6 +126,10 @@ label,.label{font-size:15px;font-weight:600}
 (function () {
   'use strict';
   var CFG = window.ULB_CONFIG;
+  /* เวอร์ชันแอป — แก้ที่นี่ที่เดียว */
+  var APP_VERSION = '1.1';
+  var APP_NAME = 'ULB นั่งสมาธิ';
+  var APP_DEV = 'กานต์ · ULB 1';
   var CLIP_SECONDS = 308;
   var BELL_TIMES = [61, 121.2, 181.7, 242.2, 300.1];
   var params = new URLSearchParams(location.search);
@@ -137,16 +145,19 @@ label,.label{font-size:15px;font-weight:600}
   function crown(w) {
     return '<svg width="' + w + '" height="' + w + '" viewBox="0 0 24 24" aria-hidden="true"><path d="M3 8l4.5 4L12 5l4.5 7L21 8l-2 10H5z" fill="#F2CE5C" stroke="#D4A62A" stroke-width="0.8" stroke-linejoin="round"></path><circle cx="3" cy="7.5" r="1.2" fill="#F2CE5C"></circle><circle cx="12" cy="4.5" r="1.2" fill="#F2CE5C"></circle><circle cx="21" cy="7.5" r="1.2" fill="#F2CE5C"></circle><circle cx="12" cy="13.6" r="1.7" fill="#A3172E"></circle><circle cx="7.6" cy="15.2" r="1.1" fill="#1B2B5B"></circle><circle cx="16.4" cy="15.2" r="1.1" fill="#1B2B5B"></circle><rect x="5" y="18" width="14" height="2.2" rx="0.6" fill="#D4A62A"></rect></svg>';
   }
-  /* LV0: medal สีเทา · LV1–3: 1–3 เหรียญ · LV4: ถ้วย (Champ) · LV5: มงกุฎ (ราชา) */
+  /* LV0: medal สีเทา · LV1–3: 1–3 เหรียญ · LV4: ถ้วย (Pro) · LV5: มงกุฎ (Master) */
   function levelIcons(lv, size, forceGrey) {
     var h = '';
     if (lv <= 0) h = medal(size);
     else if (lv <= 3) { for (var i = 0; i < lv; i++) h += medal(size); }
-    else if (lv === 4) h = trophy(Math.round(size * 1.15));
-    else h = crown(Math.round(size * 1.15));
+    else if (lv === 4) h = trophy(Math.round(size * 1.6));
+    else h = crown(Math.round(size * 1.6));
     return '<span class="icons' + (lv <= 0 || forceGrey ? ' grey' : '') + '" aria-label="LV' + lv + '">' + h + '</span>';
   }
-  var LV_NAMES = ['LV0 · เริ่มต้น', 'LV1 · 1 เหรียญ', 'LV2 · 2 เหรียญ', 'LV3 · 3 เหรียญ', 'LV4 · Champ', 'LV5 · ราชา'];
+  /* ไอคอนข้างชื่อคนอื่น — LV0 ไม่แสดง */
+  function nameLevel(lv, size) { return lv > 0 ? levelIcons(lv, size || 15) : ''; }
+  var LV_NAMES = ['LV0 · เริ่มต้น', 'LV1 · 1 เหรียญ', 'LV2 · 2 เหรียญ', 'LV3 · 3 เหรียญ', 'LV4 · Pro', 'LV5 · Master'];
+  var LV_PRIZE = ['', 'ได้เหรียญแรก', 'ได้ 2 เหรียญ', 'ได้ 3 เหรียญ', 'ได้ถ้วย Pro', 'ได้มงกุฎ Master'];
   function rays(cx, cy, r1, lens, n, skipBottom, width) {
     var d = '';
     for (var k = 0; k < n; k++) {
@@ -198,7 +209,7 @@ label,.label{font-size:15px;font-weight:600}
   };
 
   /* ---------------- Local cache (เปิดแอปครั้งถัดไปขึ้นทันที) ---------------- */
-  var CACHE_KEY = 'ulb_cache_v1';
+  var CACHE_KEY = 'ulb_cache_v2'; // เปลี่ยนเมื่อรูปแบบข้อมูลเปลี่ยน (v2 = นับเป็นจำนวนครั้ง)
   function bkkDay() {
     try { return new Date().toLocaleDateString('en-CA', { timeZone: 'Asia/Bangkok' }); } catch (e) { return ''; }
   }
@@ -306,7 +317,7 @@ label,.label{font-size:15px;font-weight:600}
     if (S.view === 'register') { app.innerHTML = viewRegister(); return; }
     if (!S.state || !S.state.me) { app.innerHTML = '<div class="loading">กำลังโหลด…</div>'; return; }
     var body = S.view === 'stars' ? viewLevel() : S.view === 'cup' ? viewCup() : S.view === 'rank' ? viewRank() : viewHome();
-    app.innerHTML = body + (S.phase === 'running' && S.view === 'home' ? '' : viewNav());
+    app.innerHTML = body + (S.phase === 'running' && S.view === 'home' ? '' : viewNav()) + (S.about ? viewAbout() : '');
     if (S.view === 'cup' && S.cupReady) moveRunners();
   }
 
@@ -374,12 +385,11 @@ label,.label{font-size:15px;font-weight:600}
   function nextText(me) {
     if (!me.next) return 'ระดับสูงสุดแล้ว รักษามงกุฎไว้ให้ได้';
     var n = me.next.level;
-    if (me.next.points != null) return 'อีก ' + me.next.points + ' คะแนน ได้' + (n === 1 ? 'เหรียญแรก' : ' ' + n + ' เหรียญ');
-    return 'นั่งครบทุกวันต่ออีก ' + me.next.days + ' วัน ได้' + (n === 4 ? 'ถ้วย Champ' : 'มงกุฎราชา');
+    return 'อีก ' + me.next.need + ' ครั้ง' + (n === 5 ? ' (ใน ' + me.next.days + ' วัน)' : '') + ' ' + LV_PRIZE[n];
   }
   function todayText(me, max) {
     var left = max - me.todayN;
-    return left > 0 ? 'วันนี้นั่งอีก ' + left + ' ครั้ง จะครบ ' + max + ' ครั้ง (+1 โบนัส)' : 'วันนี้นั่งครบ ' + max + ' ครั้งแล้ว';
+    return left > 0 ? 'วันนี้นั่งอีก ' + left + ' ครั้ง จะครบ ' + max + ' ครั้ง' : 'วันนี้นั่งครบ ' + max + ' ครั้งแล้ว';
   }
 
   function viewHome() {
@@ -404,7 +414,7 @@ label,.label{font-size:15px;font-weight:600}
 
     var labels = ['จ', 'อ', 'พ', 'พฤ', 'ศ', 'ส', 'อา'];
     h += '<div class="card col" style="gap:10px" data-go="stars" role="link" tabindex="0">' +
-      '<div class="row between" style="align-items:baseline"><div style="font-size:15px;font-weight:700;color:var(--navy)">' + me.score + ' คะแนน</div>' +
+      '<div class="row between" style="align-items:baseline"><div style="font-size:15px;font-weight:700;color:var(--navy)">' + me.count + ' / ' + me.maxCount + ' ครั้ง</div>' +
       '<div class="xs muted">28 วันล่าสุด (4 สัปดาห์)</div></div><div class="week">';
     me.last7.forEach(function (d, i) {
       var cls = d.n >= max ? 'full' : i === 6 ? 'today' : d.n > 0 ? 'part' : 'future';
@@ -420,7 +430,7 @@ label,.label{font-size:15px;font-weight:600}
       '<div class="grow" style="font-size:14px;font-weight:600">เพื่อนเพิ่งนั่งเสร็จ</div><div class="xs muted">วันนี้ ' + st.satToday + ' จาก ' + st.totalMembers + ' คน</div></div>';
     if (!st.recent.length) h += '<div class="small muted">ยังไม่มีใครนั่งในวันนี้ เริ่มเป็นคนแรกเลย</div>';
     st.recent.forEach(function (r) {
-      h += '<div class="feed-row"><div class="avatar sm">' + face(r.nickname, r.picture) + '</div><div class="grow"><b>' + esc(r.nickname) + '</b> <span class="muted">· ULB ' + r.ulb + ' · ครั้งที่ ' + r.nth + '</span></div><div class="xs muted">' + ago(r.at) + '</div></div>';
+      h += '<div class="feed-row"><div class="avatar sm">' + face(r.nickname, r.picture) + '</div><div class="grow"><span class="namelv"><b>' + esc(r.nickname) + '</b>' + nameLevel(r.level, 13) + '</span> <span class="muted">· ULB ' + r.ulb + ' · ครั้งที่ ' + r.nth + '</span></div><div class="xs muted">' + ago(r.at) + '</div></div>';
     });
     h += '</div>';
     return h + '</div>';
@@ -452,13 +462,13 @@ label,.label{font-size:15px;font-weight:600}
       title = 'อนุโมทนาครับ'; sub = 'วันนี้นับครบ ' + max + ' ครั้งไปแล้ว ครั้งนี้เป็นการนั่งเพิ่ม';
     } else {
       var b = r.before || {};
-      var gained = me.todayPts - (b.todayPts || 0);
+      var total = 'รวม ' + me.count + ' ครั้งใน ' + S.state.rules.windowDays + ' วัน';
       if (me.level > (b.level || 0)) {
         up = true;
-        title = me.level === 1 ? 'ได้เหรียญแรก · LV1' : me.level <= 3 ? 'ได้ ' + me.level + ' เหรียญ · LV' + me.level : me.level === 4 ? 'ได้ถ้วย Champ · LV4' : 'ได้มงกุฎราชา · LV5';
-        sub = '+' + gained + ' คะแนน · รวม ' + me.score + ' คะแนน · ' + nextText(me);
-      } else if (me.todayN >= max) { title = 'วันนี้นั่งครบ ' + max + ' ครั้งแล้ว'; sub = '+' + gained + ' คะแนน (รวมโบนัส) · ' + nextText(me); }
-      else { title = 'นั่งครั้งที่ ' + me.todayN + ' เสร็จแล้ว'; sub = '+' + gained + ' คะแนน · ' + todayText(me, max); }
+        title = LV_PRIZE[me.level] + ' · LV' + me.level;
+        sub = total + ' · ' + nextText(me);
+      } else if (me.todayN >= max) { title = 'วันนี้นั่งครบ ' + max + ' ครั้งแล้ว'; sub = total + ' · ' + nextText(me); }
+      else { title = 'นั่งครั้งที่ ' + me.todayN + ' เสร็จแล้ว'; sub = total + ' · ' + todayText(me, max); }
     }
     var icon = up
       ? '<div style="min-width:116px;height:116px;padding:0 14px;border-radius:58px;background:var(--orange-soft);display:flex;align-items:center;justify-content:center">' + levelIcons(me.level, 64) + '</div>'
@@ -558,7 +568,7 @@ label,.label{font-size:15px;font-weight:600}
   function shareDone() {
     var me = S.state.me, max = S.state.maxPerDay;
     var extra = me.todayN >= max ? 'ครบ ' + max + ' ครั้งวันนี้' : 'ครั้งที่ ' + me.todayN + ' ของวัน';
-    if (S.result && S.result.before && me.level > (S.result.before.level || 0)) extra += ' · ได้ ' + LV_NAMES[me.level].replace(/^LV\d · /, '') + ' (LV' + me.level + ')';
+    if (S.result && S.result.before && me.level > (S.result.before.level || 0)) extra += ' · ' + LV_PRIZE[me.level] + ' (LV' + me.level + ')';
     var msg = card('ULB · นั่งสมาธิ 5 นาที', me.nickname + ' เพิ่งนั่งเสร็จ', extra, 'นั่งตามเลย', liffUrl(me.ulb));
     var ctx = (liff.getContext && liff.getContext()) || {};
     var inChat = ctx.type === 'group' || ctx.type === 'room' || ctx.type === 'utou';
@@ -581,32 +591,46 @@ label,.label{font-size:15px;font-weight:600}
 
   /* ---------------- Level ---------------- */
   function viewLevel() {
-    var me = S.state.me, R = S.state.rules, max = S.state.maxPerDay;
-    var pct = Math.min(100, Math.round(me.score / me.maxScore * 100));
-    function row(n, rule, have, goal, unit) {
+    var me = S.state.me, R = S.state.rules, max = S.state.maxPerDay, W = R.windowDays;
+    var pct = Math.min(100, Math.round(me.count / me.maxCount * 100));
+    // คำกำกับเกณฑ์ เช่น "60 ครั้ง ≈ นั่งครบ 5 วันต่อสัปดาห์"
+    function approx(goal, days) {
+      var fullDays = goal / max;
+      if (fullDays >= days) return '= นั่งครบทุกวัน ' + (days % 7 === 0 ? days / 7 + ' สัปดาห์' : days + ' วัน');
+      var perWeek = fullDays * 7 / days;
+      if (perWeek === Math.round(perWeek)) return '≈ นั่งครบ ' + perWeek + ' วันต่อสัปดาห์';
+      return '≈ นั่งครบ ' + Math.round(fullDays) + ' จาก ' + days + ' วัน';
+    }
+    function row(n, rule, have, goal, right) {
       var earned = me.level >= n, p = Math.min(100, Math.round(have / goal * 100));
       return '<div class="row" style="gap:12px;padding:12px 0;border-bottom:1px solid #E8ECF3">' +
         '<div style="width:76px;flex-shrink:0;display:flex;justify-content:flex-start">' + levelIcons(n, 23, !earned) + '</div>' +
         '<div class="grow col" style="gap:4px"><div class="row between" style="align-items:baseline"><div style="font-size:15px;font-weight:700;color:var(--navy)">' + LV_NAMES[n] + '</div>' +
-        '<div class="xs" style="color:var(--body2);white-space:nowrap">' + (earned ? 'ได้แล้ว' : 'อีก ' + Math.max(0, goal - have) + ' ' + unit) + '</div></div>' +
+        '<div class="xs" style="color:var(--body2);white-space:nowrap">' + (earned ? 'ได้แล้ว' : right || 'อีก ' + Math.max(0, goal - have) + ' ครั้ง') + '</div></div>' +
         '<div class="small muted">' + rule + '</div><div class="bar"><div style="width:' + p + '%"></div></div></div></div>';
     }
     return '<div class="page"><div class="h1">Level</div>' +
       '<div class="card col" style="gap:8px;align-items:center;padding:18px 16px 16px"><div style="height:68px;display:flex;align-items:center">' + levelIcons(me.level, 54) + '</div>' +
       '<div style="font-size:22px;font-weight:700;color:var(--navy)">' + LV_NAMES[me.level] + '</div>' +
-      '<div class="row between" style="width:100%;align-items:baseline"><div class="small" style="color:var(--body2)">คะแนน 28 วันล่าสุด (4 สัปดาห์)</div>' +
-      '<div style="font-size:20px;font-weight:700;color:var(--navy)">' + me.score + ' <span class="small" style="font-weight:400;color:var(--body2)">/ ' + me.maxScore + '</span></div></div>' +
+      '<div style="width:100%;font-size:20px;font-weight:700;color:var(--navy)">' + me.count + ' / ' + me.maxCount + ' ครั้ง <span class="small" style="font-weight:400;color:var(--body2)">· นั่งใน ' + W + ' วันล่าสุด</span></div>' +
       '<div class="bar" style="width:100%;height:8px"><div style="width:' + pct + '%"></div></div>' +
       '<div class="small" style="width:100%;color:var(--body2)">' + esc(nextText(me)) + '</div>' +
-      '<div class="row" style="width:100%"><div class="grow" style="padding:10px 12px;background:var(--bg);border-radius:12px"><div style="font-size:20px;font-weight:600;color:var(--navy)">' + me.streak + ' วัน</div><div class="xs muted">นั่งครบติดกัน</div></div>' +
-      '<div class="grow" style="padding:10px 12px;background:var(--bg);border-radius:12px"><div style="font-size:20px;font-weight:600;color:var(--navy)">' + me.dropTomorrow + '</div><div class="xs muted">คะแนนที่จะหลุดพรุ่งนี้</div></div></div></div>' +
+      '<div class="small" style="width:100%;padding:10px 12px;background:var(--bg);border-radius:12px;color:var(--body2);line-height:1.6">นั่ง 1 ครั้งนับ 1 วันละไม่เกิน ' + max + ' ครั้ง นับย้อนหลัง ' + W + ' วัน ครั้งที่เก่ากว่านั้นหลุดออกทุกวัน</div></div>' +
       '<div class="card" style="padding:4px 16px">' +
-      row(1, R.lv1 + ' คะแนน ≈ นั่งครบ 3 วัน/สัปดาห์', me.score, R.lv1, 'คะแนน') +
-      row(2, R.lv2 + ' คะแนน ≈ นั่งครบ 5 วัน/สัปดาห์', me.score, R.lv2, 'คะแนน') +
-      row(3, R.lv3 + ' คะแนน ≈ แทบทุกวัน', me.score, R.lv3, 'คะแนน') +
-      row(4, 'นั่งครบทุกวัน ' + R.lv4Streak + ' วันติด (' + Math.round(R.lv4Streak / 7) + ' สัปดาห์)', me.streak, R.lv4Streak, 'วัน') +
-      row(5, 'นั่งครบทุกวัน ' + R.lv5Streak + ' วันติด (' + Math.round(R.lv5Streak / 7) + ' สัปดาห์)', me.streak, R.lv5Streak, 'วัน') + '</div>' +
-      '<div class="small" style="color:var(--body2);line-height:1.6;padding:0 4px">นั่ง 1 ครั้ง = 1 คะแนน · วันไหนนั่งครบ ' + max + ' ครั้ง +1 โบนัส<br>นับย้อนหลัง ' + R.windowDays + ' วัน (4 สัปดาห์) คะแนนวันเก่าหลุดออกทุกวัน ไม่มีวันรีเซ็ต</div></div>';
+      row(1, R.lv1 + ' ครั้ง ' + approx(R.lv1, W), me.count, R.lv1) +
+      row(2, R.lv2 + ' ครั้ง ' + approx(R.lv2, W), me.count, R.lv2) +
+      row(3, R.lv3 + ' ครั้ง ' + approx(R.lv3, W), me.count, R.lv3) +
+      row(4, R.lv4 + ' ครั้ง ' + approx(R.lv4, W), me.count, R.lv4) +
+      row(5, R.lv5 + ' ครั้งใน ' + R.lv5Days + ' วัน ' + approx(R.lv5, R.lv5Days), me.count5, R.lv5, me.count5 + '/' + R.lv5 + ' ใน ' + R.lv5Days + ' วัน') + '</div>' +
+      '<button class="credit" data-act="about">พัฒนาโดย ' + esc(APP_DEV) + ' · v' + esc(APP_VERSION) + '</button></div>';
+  }
+  function viewAbout() {
+    return '<div class="modal" data-act="closeAbout"><div class="card" role="dialog" aria-label="เกี่ยวกับแอป">' +
+      '<div style="margin-bottom:4px">' + person(44, 'var(--navy)', 1.6) + '</div>' +
+      '<div style="font-size:20px;font-weight:700;color:var(--navy)">' + esc(APP_NAME) + '</div>' +
+      '<div class="small muted">เวอร์ชัน ' + esc(APP_VERSION) + '</div>' +
+      '<div class="small" style="color:var(--body2)">ผู้พัฒนา ' + esc(APP_DEV) + '</div>' +
+      '<button class="btn ghost" data-act="closeAbout" style="margin-top:12px">ปิด</button></div></div>';
   }
 
   /* ---------------- ULB Cup ---------------- */
@@ -622,29 +646,29 @@ label,.label{font-size:15px;font-weight:600}
 
     var hs = [92, 68, 52], bg = ['#263A96', '#C3CAD7', '#E3E8F2'], fg = ['#fff', '#18245F', '#18245F'];
     var order = lanes.length >= 3 ? [1, 0, 2] : lanes.length === 2 ? [1, 0] : [0];
-    h += '<div class="card podium"><button class="help" data-act="help" aria-label="คะแนนคิดยังไง">?</button>';
+    h += '<div class="card podium"><button class="help" data-act="help" aria-label="อันดับรุ่นคิดยังไง">?</button>';
     if (lanes.length) {
       order.forEach(function (i) {
         var l = lanes[i];
         h += '<div class="pcol">' + (i === 0 ? '<svg width="28" height="20" viewBox="0 0 30 22" fill="' + ORANGE + '" aria-hidden="true">' + CROWN_LINE + '</svg>' : '') +
-          '<div style="font-size:16px;font-weight:700;color:var(--navy)">ULB ' + l.ulb + '</div><div class="xs muted">' + l.score.toFixed(1) + ' คะแนน/คน</div>' +
+          '<div style="font-size:16px;font-weight:700;color:var(--navy)">ULB ' + l.ulb + '</div><div class="xs muted">' + l.score.toFixed(1) + ' ครั้ง/คน</div>' +
           '<div class="pblock" style="height:' + hs[i] + 'px;background:' + bg[i] + ';color:' + fg[i] + '">' + (i + 1) + '</div></div>';
       });
-    } else h += '<div class="muted small" style="align-self:center;margin:auto">ยังไม่มีคะแนนเดือนนี้</div>';
+    } else h += '<div class="muted small" style="align-self:center;margin:auto">เดือนนี้ยังไม่มีใครนั่ง</div>';
     h += '</div>';
-    if (S.help) h += '<div class="helpbox"><div style="font-weight:700;font-size:14px">คะแนนรุ่นคิดยังไง</div>' +
-      '<div>คะแนนเฉลี่ยต่อคนในเดือนนี้ รุ่นเล็กกับรุ่นใหญ่จึงแข่งกันได้แฟร์</div>' +
-      '<div>วันไหนทุกคนในรุ่นนั่งครบ ' + st.maxPerDay + ' ครั้ง รุ่นได้ +1</div><div>เริ่มนับใหม่ทุกวันที่ 1 ของเดือน</div></div>';
+    if (S.help) h += '<div class="helpbox"><div style="font-weight:700;font-size:14px">อันดับรุ่นคิดยังไง</div>' +
+      '<div>จำนวนครั้งที่นั่งเฉลี่ยต่อคนในเดือนนี้ (นับวันละไม่เกิน ' + st.maxPerDay + ' ครั้ง) รุ่นเล็กกับรุ่นใหญ่จึงแข่งกันได้แฟร์</div>' +
+      '<div>เริ่มนับใหม่ทุกวันที่ 1 ของเดือน</div></div>';
 
     var gapText = me.ulbRank === 1 ? 'รุ่นเรานำอยู่ รักษาไว้ให้ได้ถึงสิ้นเดือน'
-      : me.ulbGap ? 'ตามหลัง ULB ' + me.ulbGap.ulb + ' อีก ' + me.ulbGap.points + ' คะแนน วันไหนทุกคนในรุ่นนั่งครบ ' + st.maxPerDay + ' ครั้ง รุ่นได้โบนัส +1' : '';
+      : me.ulbGap ? 'ตามหลัง ULB ' + me.ulbGap.ulb + ' อีก ' + me.ulbGap.count + ' ครั้ง ชวนเพื่อนในรุ่นมานั่งด้วยกัน' : '';
     h += '<div class="card col" style="gap:12px;border:2px solid var(--navy)"><div class="row between"><div style="font-size:17px;font-weight:700;color:var(--navy)">รุ่นเรา · ULB ' + me.ulb + '</div>' +
       '<div style="font-size:14px;font-weight:700;color:var(--navy)">อันดับ ' + me.ulbRank + '</div></div>' +
       (gapText ? '<div style="font-size:14px;color:#3F485A;line-height:1.55">' + esc(gapText) + '</div>' : '');
     me.team.forEach(function (m) {
       var full = m.todayN >= st.maxPerDay;
       h += '<div class="row"><div class="avatar' + (m.todayN > 0 ? '' : ' idle') + '" style="width:38px;height:38px;font-size:15px;' + (m.todayN > 0 ? 'background:var(--blue);color:#fff' : 'background:transparent;border:2px dashed var(--dash);color:var(--muted)') + '">' + face(m.nickname, m.picture) + '</div>' +
-        '<div class="grow col"><div style="font-size:15px;font-weight:600">' + esc(m.nickname) + (m.me ? ' (คุณ)' : '') + '</div><div class="xs muted">วันนี้นั่งแล้ว ' + m.todayN + '/' + st.maxPerDay + ' ครั้ง</div></div>' +
+        '<div class="grow col"><div class="namelv" style="font-size:15px;font-weight:600">' + esc(m.nickname) + (m.me ? ' (คุณ)' : '') + nameLevel(m.level, 14) + '</div><div class="xs muted">วันนี้นั่งแล้ว ' + m.todayN + '/' + st.maxPerDay + ' ครั้ง</div></div>' +
         (full ? '<div class="small" style="font-weight:600;color:var(--navy)">ครบแล้ว</div>' : !m.me ? '<button class="btn green" data-act="invite" style="width:auto;min-height:40px;padding:0 14px;font-size:14px;border-radius:20px">ชวนมานั่ง</button>' : '') + '</div>';
     });
     if (me.groupUrl) h += '<a class="small" href="' + esc(me.groupUrl) + '" style="text-align:center;font-weight:600">เข้ากลุ่มไลน์ ULB ' + me.ulb + '</a>';
@@ -668,10 +692,10 @@ label,.label{font-size:15px;font-weight:600}
   /* ---------------- Ranking ---------------- */
   function viewRank() {
     var st = S.state, p = S.period, max = st.maxPerDay;
-    var rows = st.ranking.slice().sort(function (a, b) { return (b[p] - a[p]) || (b.score - a.score) || a.nickname.localeCompare(b.nickname, 'th'); });
+    var rows = st.ranking.slice().sort(function (a, b) { return (b[p] - a[p]) || (b.count - a.count) || a.nickname.localeCompare(b.nickname, 'th'); });
     var meRank = 0; rows.forEach(function (r, i) { if (r.me) meRank = i + 1; });
     var h = '<div class="page"><div class="h1">อันดับ</div><div class="chips">';
-    [['today', 'วันนี้'], ['score', '28 วันล่าสุด (4 สัปดาห์)']].forEach(function (x) {
+    [['today', 'วันนี้'], ['count', st.rules.windowDays + ' วันล่าสุด (4 สัปดาห์)']].forEach(function (x) {
       h += '<button class="chip' + (p === x[0] ? ' on' : '') + '" data-period="' + x[0] + '">' + x[1] + '</button>';
     });
     h += '</div><div class="card row between"><div style="font-size:15px;color:var(--body2)">' + (p === 'today' ? 'วันนี้นั่งแล้ว' : 'คุณอยู่อันดับ') + '</div>' +
@@ -681,14 +705,14 @@ label,.label{font-size:15px;font-weight:600}
     rows.forEach(function (r, i) {
       h += '<div class="rank-row' + (r.me ? ' me' : '') + '"><div style="width:22px;text-align:center;font-weight:600" class="muted">' + (i + 1) + '</div>' +
         '<div class="avatar" style="width:36px;height:36px;font-size:15px">' + face(r.nickname, r.picture) + '</div>' +
-        '<div class="grow col"><div class="row" style="gap:6px"><div style="font-size:16px;font-weight:600">' + esc(r.nickname) + '</div>' + (r.level > 0 ? levelIcons(r.level, 17) : '') + '</div>' +
+        '<div class="grow col"><div class="row" style="gap:6px"><div style="font-size:16px;font-weight:600">' + esc(r.nickname) + '</div>' + nameLevel(r.level, 15) + '</div>' +
         '<div class="xs muted">ULB ' + r.ulb + (p === 'today' ? (r.today ? ' · วันนี้ ' + r.today + ' ครั้ง' : ' · ยังไม่ได้นั่ง') : '') + '</div></div>';
       if (p === 'today') {
         h += '<div class="sdots">';
         for (var k = 1; k <= max; k++) h += '<div class="sdot' + (r.today >= k ? ' on' : '') + '">' + k + '</div>';
         h += '</div>';
       } else {
-        h += '<div class="col" style="align-items:flex-end"><div style="font-size:18px;font-weight:700;color:var(--navy)">' + r.score + '</div><div class="xs muted">คะแนน</div></div>';
+        h += '<div class="col" style="align-items:flex-end"><div style="font-size:18px;font-weight:700;color:var(--navy)">' + r.count + '</div><div class="xs muted">ครั้ง</div></div>';
       }
       h += '</div>';
     });
@@ -711,6 +735,8 @@ label,.label{font-size:15px;font-weight:600}
     else if (a === 'shareDone') shareDone();
     else if (a === 'invite') invite();
     else if (a === 'help') { S.help = !S.help; render(); }
+    else if (a === 'about') { S.about = true; render(); }
+    else if (a === 'closeAbout') { if (e.target === t) { S.about = false; render(); } }
   });
   app.addEventListener('submit', function (e) { if (e.target.id === 'regForm') submitRegister(e); });
   document.addEventListener('visibilitychange', function () { if (!document.hidden) refresh(); });
