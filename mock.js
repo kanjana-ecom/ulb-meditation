@@ -18,7 +18,7 @@ function monthEnd(d) {
   var p = ymd_(d);
   return new Date(Date.UTC(p[0], p[1] + 1, 0)).toISOString().slice(0, 10);
 }
-var DEFAULT_RULES = { maxPerDay: 3, windowDays: 28, lv1: 36, lv2: 60, lv3: 78, lv4: 84, lv5: 168, lv5Days: 56 };
+var DEFAULT_RULES = { maxPerDay: 3, windowDays: 28, lv1: 21, lv2: 42, lv3: 63, lv4: 84, lv5: 168, lv5Days: 56 };
 
 /**
  * นับเป็น "จำนวนครั้งที่นั่ง": นั่ง 1 ครั้ง = 1 (นับสูงสุด maxPerDay ครั้ง/วัน) ไม่มีโบนัส

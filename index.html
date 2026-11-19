@@ -112,7 +112,7 @@ label,.label{font-size:15px;font-weight:600}
 .toast{position:fixed;left:50%;bottom:96px;transform:translateX(-50%);background:var(--navy);color:#fff;padding:10px 16px;border-radius:12px;font-size:14px;z-index:9;max-width:90vw;text-align:center}
 .loading{flex:1;display:flex;align-items:center;justify-content:center;color:var(--muted)}
 .err{color:#B42318;font-size:14px}
-.credit{display:block;margin:8px auto 0;background:none;border:none;color:var(--muted);opacity:.7;font-size:11px;cursor:pointer;min-height:32px;padding:0 8px}
+.credit{display:block;margin:auto auto 0;text-align:center;background:none;border:none;color:var(--muted);opacity:.7;font-size:11px;cursor:pointer;min-height:32px;padding:0 8px}
 .modal{position:fixed;inset:0;background:rgba(17,24,52,.45);display:flex;align-items:center;justify-content:center;padding:24px 16px;z-index:10}
 .modal .card{width:100%;max-width:320px;display:flex;flex-direction:column;align-items:center;gap:6px;text-align:center;padding:22px 20px 18px}
 .namelv{display:inline-flex;align-items:center;gap:6px;vertical-align:middle}
@@ -129,7 +129,7 @@ label,.label{font-size:15px;font-weight:600}
   /* เวอร์ชันแอป — แก้ที่นี่ที่เดียว */
   var APP_VERSION = '1.1';
   var APP_NAME = 'ULB นั่งสมาธิ';
-  var APP_DEV = 'กานต์ · ULB 1';
+  var APP_DEV = 'Karn · ULB 1';
   var CLIP_SECONDS = 308;
   var BELL_TIMES = [61, 121.2, 181.7, 242.2, 300.1];
   var params = new URLSearchParams(location.search);
@@ -317,7 +317,10 @@ label,.label{font-size:15px;font-weight:600}
     if (S.view === 'register') { app.innerHTML = viewRegister(); return; }
     if (!S.state || !S.state.me) { app.innerHTML = '<div class="loading">กำลังโหลด…</div>'; return; }
     var body = S.view === 'stars' ? viewLevel() : S.view === 'cup' ? viewCup() : S.view === 'rank' ? viewRank() : viewHome();
-    app.innerHTML = body + (S.phase === 'running' && S.view === 'home' ? '' : viewNav()) + (S.about ? viewAbout() : '');
+    var sitting = S.phase === 'running' && S.view === 'home';
+    // เครดิตล่างสุดของทุกหน้า (ในกล่อง .page ก่อนปิด จึงอยู่เหนือแถบเมนู)
+    if (!sitting) body = body.replace(/<\/div>$/, viewCredit() + '</div>');
+    app.innerHTML = body + (sitting ? '' : viewNav()) + (S.about ? viewAbout() : '');
     if (S.view === 'cup' && S.cupReady) moveRunners();
   }
 
@@ -593,13 +596,11 @@ label,.label{font-size:15px;font-weight:600}
   function viewLevel() {
     var me = S.state.me, R = S.state.rules, max = S.state.maxPerDay, W = R.windowDays;
     var pct = Math.min(100, Math.round(me.count / me.maxCount * 100));
-    // คำกำกับเกณฑ์ เช่น "60 ครั้ง ≈ นั่งครบ 5 วันต่อสัปดาห์"
-    function approx(goal, days) {
-      var fullDays = goal / max;
-      if (fullDays >= days) return '= นั่งครบทุกวัน ' + (days % 7 === 0 ? days / 7 + ' สัปดาห์' : days + ' วัน');
-      var perWeek = fullDays * 7 / days;
-      if (perWeek === Math.round(perWeek)) return '≈ นั่งครบ ' + perWeek + ' วันต่อสัปดาห์';
-      return '≈ นั่งครบ ' + Math.round(fullDays) + ' จาก ' + days + ' วัน';
+    // คำกำกับเกณฑ์ เช่น "42 ครั้ง ≈ นั่งครบ 2 สัปดาห์" (ไม่ต้องนั่งติดกัน)
+    function approx(goal) {
+      var fullDays = goal / max, weeks = fullDays / 7;
+      if (weeks === Math.round(weeks)) return '≈ นั่งครบ ' + weeks + ' สัปดาห์';
+      return '≈ นั่งครบ ' + Math.round(fullDays) + ' วัน';
     }
     function row(n, rule, have, goal, right) {
       var earned = me.level >= n, p = Math.min(100, Math.round(have / goal * 100));
@@ -609,7 +610,7 @@ label,.label{font-size:15px;font-weight:600}
         '<div class="xs" style="color:var(--body2);white-space:nowrap">' + (earned ? 'ได้แล้ว' : right || 'อีก ' + Math.max(0, goal - have) + ' ครั้ง') + '</div></div>' +
         '<div class="small muted">' + rule + '</div><div class="bar"><div style="width:' + p + '%"></div></div></div></div>';
     }
-    return '<div class="page"><div class="h1">Level</div>' +
+    return '<div class="page"><div class="h1">Level ของคุณ</div>' +
       '<div class="card col" style="gap:8px;align-items:center;padding:18px 16px 16px"><div style="height:68px;display:flex;align-items:center">' + levelIcons(me.level, 54) + '</div>' +
       '<div style="font-size:22px;font-weight:700;color:var(--navy)">' + LV_NAMES[me.level] + '</div>' +
       '<div style="width:100%;font-size:20px;font-weight:700;color:var(--navy)">' + me.count + ' / ' + me.maxCount + ' ครั้ง <span class="small" style="font-weight:400;color:var(--body2)">· นั่งใน ' + W + ' วันล่าสุด</span></div>' +
@@ -617,12 +618,15 @@ label,.label{font-size:15px;font-weight:600}
       '<div class="small" style="width:100%;color:var(--body2)">' + esc(nextText(me)) + '</div>' +
       '<div class="small" style="width:100%;padding:10px 12px;background:var(--bg);border-radius:12px;color:var(--body2);line-height:1.6">นั่ง 1 ครั้งนับ 1 วันละไม่เกิน ' + max + ' ครั้ง นับย้อนหลัง ' + W + ' วัน ครั้งที่เก่ากว่านั้นหลุดออกทุกวัน</div></div>' +
       '<div class="card" style="padding:4px 16px">' +
-      row(1, R.lv1 + ' ครั้ง ' + approx(R.lv1, W), me.count, R.lv1) +
-      row(2, R.lv2 + ' ครั้ง ' + approx(R.lv2, W), me.count, R.lv2) +
-      row(3, R.lv3 + ' ครั้ง ' + approx(R.lv3, W), me.count, R.lv3) +
-      row(4, R.lv4 + ' ครั้ง ' + approx(R.lv4, W), me.count, R.lv4) +
-      row(5, R.lv5 + ' ครั้งใน ' + R.lv5Days + ' วัน ' + approx(R.lv5, R.lv5Days), me.count5, R.lv5, me.count5 + '/' + R.lv5 + ' ใน ' + R.lv5Days + ' วัน') + '</div>' +
-      '<button class="credit" data-act="about">พัฒนาโดย ' + esc(APP_DEV) + ' · v' + esc(APP_VERSION) + '</button></div>';
+      row(1, R.lv1 + ' ครั้ง ' + approx(R.lv1), me.count, R.lv1) +
+      row(2, R.lv2 + ' ครั้ง ' + approx(R.lv2), me.count, R.lv2) +
+      row(3, R.lv3 + ' ครั้ง ' + approx(R.lv3), me.count, R.lv3) +
+      row(4, R.lv4 + ' ครั้ง ' + approx(R.lv4), me.count, R.lv4) +
+      row(5, R.lv5 + ' ครั้งใน ' + R.lv5Days + ' วัน ' + approx(R.lv5), me.count5, R.lv5, me.count5 + '/' + R.lv5 + ' ใน ' + R.lv5Days + ' วัน') + '</div>' +
+      '</div>';
+  }
+  function viewCredit() {
+    return '<button class="credit" data-act="about">by ' + esc(APP_DEV) + ' · v' + esc(APP_VERSION) + '</button>';
   }
   function viewAbout() {
     return '<div class="modal" data-act="closeAbout"><div class="card" role="dialog" aria-label="เกี่ยวกับแอป">' +
